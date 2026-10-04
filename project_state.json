@@ -18,7 +18,8 @@
     "pendingTasks": [
       { "cutId": "cut-19", "task": "video_generation", "note": "댄스 모션 재시도 필요" },
       { "cutId": "cut-22", "task": "illustration", "note": "배경 무드 미확정" },
-      { "cutId": "system", "task": "storyboard", "note": "Phase 1 UI 설정 완료 (React 19 + Tailwind v4 OKLCH 테마 설정 및 초기 컴포넌트 마이그레이션)" }
+      { "cutId": "system", "task": "storyboard", "note": "Phase 1 UI 및 상태 스토어 설정 완료 (Zustand, AppShell, Rust 커맨드)" },
+      { "cutId": "system", "task": "storyboard", "note": "Phase 2 컷 그리드 및 허브 완벽 구현 완료 (Claude 4.6 Sonnet 리팩토링 적용, DND 최적화). 다음 목표: Phase 3 타임라인 & 가편집 엔진" }
     ]
   },
   "music": {
