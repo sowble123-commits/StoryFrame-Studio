@@ -101,12 +101,16 @@ pub fn create_project(app: AppHandle, name: String, path: String) -> Result<Valu
 }
 
 #[tauri::command]
-pub async fn open_project(app: AppHandle) -> Result<Value, String> {
-    let folder_path = app.dialog().file().blocking_pick_folder().map(|p| p.to_string());
-    
-    let folder_path = match folder_path {
-        Some(path) => path,
-        None => return Err("Cancelled".to_string()),
+pub async fn open_project(app: AppHandle, path: Option<String>) -> Result<Value, String> {
+    let folder_path = match path {
+        Some(p) => p,
+        None => {
+            let picked = app.dialog().file().blocking_pick_folder().map(|p| p.to_string());
+            match picked {
+                Some(p) => p,
+                None => return Err("Cancelled".to_string()),
+            }
+        }
     };
 
     let state_path = PathBuf::from(&folder_path).join("project_state.json");

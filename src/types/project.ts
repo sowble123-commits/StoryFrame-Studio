@@ -134,6 +134,7 @@ export interface UiState {
 export interface ProjectState {
   $schema?: string;
   version: string;
+  projectPath?: string;
   meta: ProjectMeta;
   progress: ProjectProgress;
   music: ProjectMusic;
