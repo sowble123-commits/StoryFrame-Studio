@@ -1,47 +1,58 @@
 import { useEffect } from 'react';
 import { useStoryFrameStore } from '@/store';
+import { playbackClock, seekTo } from '@/lib/playbackClock';
+
+/** 재생 중에는 스토어 값이 낡았으므로 마스터 클락이 진실의 원천 */
+function now() {
+  const s = useStoryFrameStore.getState();
+  return s.isPlaying ? playbackClock.time : s.currentTime;
+}
+
+function seekBy(delta: number) {
+  const t = Math.max(0, now() + delta);
+  seekTo(t);
+  if (!useStoryFrameStore.getState().isPlaying) {
+    useStoryFrameStore.getState().setCurrentTime(t);
+  }
+}
 
 export function useKeyboardShortcuts() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      const el = e.target;
+      if (
+        el instanceof HTMLInputElement ||
+        el instanceof HTMLTextAreaElement ||
+        el instanceof HTMLSelectElement ||
+        (el instanceof HTMLElement && el.isContentEditable)
+      ) return;
 
       const store = useStoryFrameStore.getState();
 
-      switch(e.code) {
+      switch (e.code) {
         case 'Space':
           e.preventDefault();
           store.setIsPlaying(!store.isPlaying);
           break;
         case 'KeyJ':
-          store.setCurrentTime(Math.max(0, store.currentTime - 1));
+          seekBy(-1);
           break;
         case 'KeyL':
-          store.setCurrentTime(store.currentTime + 1);
+          seekBy(1);
           break;
         case 'KeyK':
           store.setIsPlaying(false);
           break;
-        case 'KeyI': {
-          // Set In point for selected clip
-          const selectedId = store.project?.uiState?.selectedCutId;
-          if (selectedId) {
-             const cut = store.project?.cuts.find(c => c.id === selectedId);
-             if (cut) {
-                 store.updateCutTimeline(selectedId, { inPointSec: store.currentTime });
-             }
-          }
-          break;
-        }
+        case 'KeyI':
         case 'KeyO': {
-          // Set Out point for selected clip
           const selectedId = store.project?.uiState?.selectedCutId;
-          if (selectedId) {
-             const cut = store.project?.cuts.find(c => c.id === selectedId);
-             if (cut) {
-                 store.updateCutTimeline(selectedId, { outPointSec: store.currentTime });
-             }
+          const cut = selectedId ? store.project?.cuts.find((c) => c.id === selectedId) : undefined;
+          if (!cut) break;
+          const t = now();
+          if (e.code === 'KeyI') {
+            if (t < cut.timeline.outPointSec) store.updateCutTimeline(cut.id, { inPointSec: Math.max(0, t) });
+          } else if (t > cut.timeline.inPointSec) {
+            store.updateCutTimeline(cut.id, { outPointSec: t });
           }
           break;
         }

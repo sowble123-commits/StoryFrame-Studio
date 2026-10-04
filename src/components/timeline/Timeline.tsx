@@ -1,96 +1,96 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useCallback, useMemo } from 'react';
 import { useStoryFrameStore } from '@/store';
 import { WaveformTrack } from './WaveformTrack';
 import { VideoTrack } from './VideoTrack';
-import { Play, Pause } from 'lucide-react';
+import { Play, Pause, ZoomIn, ZoomOut } from 'lucide-react';
+import { usePlaybackEngine } from '@/hooks/usePlaybackEngine';
+import { seekTo } from '@/lib/playbackClock';
 
+/**
+ * Timeline — 컨테이너 & 마스터 클락 소비자
+ *
+ * currentTime을 구독하지 않는다. Playhead/타임코드는 ref + 직접 DOM 뮤테이션.
+ */
 export function Timeline() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const currentTime = useStoryFrameStore(s => s.currentTime);
-  const isPlaying = useStoryFrameStore(s => s.isPlaying);
-  const setCurrentTime = useStoryFrameStore(s => s.setCurrentTime);
-  const setIsPlaying = useStoryFrameStore(s => s.setIsPlaying);
-  const zoom = useStoryFrameStore(s => s.project?.uiState?.timelineZoom ?? 100);
+  const playheadRef  = useRef<HTMLDivElement>(null);
+  const timecodeRef  = useRef<HTMLSpanElement>(null);
 
-  const PIXELS_PER_SECOND = zoom;
-  const music = useStoryFrameStore(s => s.project?.music);
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const isPlaying       = useStoryFrameStore((s) => s.isPlaying);
+  const setIsPlaying    = useStoryFrameStore((s) => s.setIsPlaying);
+  const zoom            = useStoryFrameStore((s) => s.project?.uiState?.timelineZoom ?? 100);
+  const setTimelineZoom = useStoryFrameStore((s) => s.setTimelineZoom);
+  const musicDuration   = useStoryFrameStore((s) => s.project?.music?.durationSec ?? 180);
 
-  // Audio Playback Sync
-  useEffect(() => {
-    if (audioRef.current && music?.filePath) {
-      if (!audioRef.current.src.endsWith(music.filePath)) {
-        audioRef.current.src = music.filePath;
+  usePlaybackEngine({ playheadRef, timecodeRef, pixelsPerSecond: zoom });
+
+  const handleTimelineClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const el = containerRef.current;
+      if (!el) return;
+      // 클립/핸들 위 클릭은 seek 대상이 아님
+      if ((e.target as HTMLElement).closest('[data-no-seek]')) return;
+      const rect = el.getBoundingClientRect();
+      seekTo((e.clientX - rect.left + el.scrollLeft) / zoom);
+      // 정지 상태 seek은 스토어에도 반영 (단축키/저장 일관성)
+      if (!useStoryFrameStore.getState().isPlaying) {
+        useStoryFrameStore.getState().setCurrentTime(Math.max(0, (e.clientX - rect.left + el.scrollLeft) / zoom));
       }
-      if (Math.abs(audioRef.current.currentTime - currentTime) > 0.2) {
-        audioRef.current.currentTime = currentTime;
-      }
-      if (isPlaying) {
-        audioRef.current.play().catch(() => {});
-      } else {
-        audioRef.current.pause();
-      }
-    }
-  }, [currentTime, isPlaying, music?.filePath]);
+    },
+    [zoom],
+  );
 
-  // Update store time based on audio playback to drive the playhead smoothly
-  useEffect(() => {
-    let animationFrameId: number;
-    const updateTime = () => {
-      if (isPlaying && audioRef.current) {
-        setCurrentTime(audioRef.current.currentTime);
-        animationFrameId = requestAnimationFrame(updateTime);
-      }
-    };
-    if (isPlaying) {
-      animationFrameId = requestAnimationFrame(updateTime);
-    }
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [isPlaying, setCurrentTime]);
+  const handleZoom = useCallback(
+    (delta: number) => setTimelineZoom(Math.min(400, Math.max(20, zoom + delta))),
+    [zoom, setTimelineZoom],
+  );
 
-  const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left + containerRef.current.scrollLeft;
-    const newTime = Math.max(0, x / PIXELS_PER_SECOND);
-    setCurrentTime(newTime);
-  };
-
-  const playheadX = currentTime * PIXELS_PER_SECOND;
+  const trackWidth = useMemo(
+    () => Math.max(1000, musicDuration * zoom),
+    [musicDuration, zoom],
+  );
 
   return (
-    <div className="flex flex-col h-full bg-slate-900 border-t border-slate-800 text-slate-300 relative">
-      <audio ref={audioRef} className="hidden" />
-      {/* Toolbar */}
-      <div className="flex items-center p-2 border-b border-slate-800 bg-slate-950">
+    <div className="flex flex-col h-full bg-slate-900 border-t border-slate-800 text-slate-300 relative select-none">
+      <div className="flex items-center gap-3 px-3 py-2 border-b border-slate-800 bg-slate-950 shrink-0">
         <button
+          type="button"
           onClick={() => setIsPlaying(!isPlaying)}
-          className="p-1.5 rounded hover:bg-slate-800 text-slate-300 transition-colors"
+          aria-label={isPlaying ? '일시정지' : '재생'}
+          className="p-1.5 rounded hover:bg-slate-800 text-slate-300 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400"
         >
-          {isPlaying ? <Pause size={18} /> : <Play size={18} />}
+          {isPlaying ? <Pause size={17} /> : <Play size={17} />}
         </button>
-        <div className="ml-4 font-mono text-xs">
-          {currentTime.toFixed(2)}s
+
+        <span ref={timecodeRef} className="font-mono text-xs text-slate-400 w-16 tabular-nums">
+          0.00s
+        </span>
+
+        <div className="flex items-center gap-1 ml-auto">
+          <button type="button" onClick={() => handleZoom(-20)} aria-label="줌 아웃"
+            className="p-1 rounded hover:bg-slate-800 text-slate-500 transition-colors">
+            <ZoomOut size={14} />
+          </button>
+          <span className="text-xs text-slate-600 w-12 text-center tabular-nums">{zoom}px/s</span>
+          <button type="button" onClick={() => handleZoom(20)} aria-label="줌 인"
+            className="p-1 rounded hover:bg-slate-800 text-slate-500 transition-colors">
+            <ZoomIn size={14} />
+          </button>
         </div>
       </div>
 
-      {/* Tracks Container */}
-      <div 
-        className="relative flex-1 overflow-auto overflow-x-scroll"
-        ref={containerRef}
-        onClick={handleTimelineClick}
-      >
-        <div className="relative min-w-full" style={{ width: `${Math.max(1000, (music?.durationSec || 180) * PIXELS_PER_SECOND)}px` }}>
-          {/* Tracks */}
-          <VideoTrack pixelsPerSecond={PIXELS_PER_SECOND} />
-          <WaveformTrack pixelsPerSecond={PIXELS_PER_SECOND} />
+      <div ref={containerRef} className="relative flex-1 overflow-auto" onClick={handleTimelineClick}>
+        <div className="relative min-h-full" style={{ width: `${trackWidth}px` }}>
+          <VideoTrack pixelsPerSecond={zoom} />
+          <WaveformTrack pixelsPerSecond={zoom} />
 
-          {/* Playhead */}
           <div
-            className="absolute top-0 bottom-0 w-px bg-red-500 z-50 pointer-events-none"
-            style={{ left: `${playheadX}px` }}
+            ref={playheadRef}
+            aria-hidden="true"
+            className="absolute top-0 bottom-0 left-0 w-px bg-red-500 z-50 pointer-events-none"
+            style={{ willChange: 'transform' }}
           >
-            <div className="w-3 h-3 bg-red-500 rounded-full -translate-x-1.5 -translate-y-1.5" />
+            <div className="absolute -top-1 -left-1.5 w-3 h-3 bg-red-500 rotate-45" />
           </div>
         </div>
       </div>

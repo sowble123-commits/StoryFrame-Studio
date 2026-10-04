@@ -235,6 +235,10 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
         const cut = state.project.cuts.find((c) => c.id === cutId);
         if (!cut) return;
         Object.assign(cut.timeline, patch);
+        if (patch.inPointSec !== undefined || patch.outPointSec !== undefined) {
+          const dur = cut.timeline.outPointSec - cut.timeline.inPointSec;
+          if (dur > 0) cut.timeline.effectiveDurationSec = dur;
+        }
       });
     },
   }))
