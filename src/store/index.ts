@@ -32,6 +32,14 @@ interface StoryFrameStore {
   updateCut: (id: string, patch: Partial<import('@/types/project').Cut>) => void;
   /** 가챠 슬롯: 특정 컷의 비디오 버전 isSelected 스위칭 */
   switchVideoVersion: (cutId: string, versionId: string) => void;
+
+  // Playback state
+  currentTime: number;
+  isPlaying: boolean;
+  setCurrentTime: (time: number) => void;
+  setIsPlaying: (playing: boolean) => void;
+  setTimelineZoom: (zoom: number) => void;
+  updateCutTimeline: (cutId: string, patch: Partial<import('@/types/project').CutTimeline>) => void;
 }
 
 export const useStoryFrameStore = create<StoryFrameStore>()(
@@ -199,6 +207,34 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
         cut.video.versions.forEach((v) => {
           v.isSelected = v.versionId === versionId;
         });
+      });
+    },
+
+    currentTime: 0,
+    isPlaying: false,
+    setCurrentTime: (time) => {
+      set((state) => {
+        state.currentTime = time;
+      });
+    },
+    setIsPlaying: (playing) => {
+      set((state) => {
+        state.isPlaying = playing;
+      });
+    },
+    setTimelineZoom: (zoom) => {
+      set((state) => {
+        if (state.project) {
+          state.project.uiState.timelineZoom = zoom;
+        }
+      });
+    },
+    updateCutTimeline: (cutId, patch) => {
+      set((state) => {
+        if (!state.project?.cuts) return;
+        const cut = state.project.cuts.find((c) => c.id === cutId);
+        if (!cut) return;
+        Object.assign(cut.timeline, patch);
       });
     },
   }))

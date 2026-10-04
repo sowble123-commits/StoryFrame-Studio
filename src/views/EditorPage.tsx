@@ -97,7 +97,12 @@ const ViewToggle = memo(function ViewToggle({
 
 // ─── EditorPage ───────────────────────────────────────────────────────────────
 
+import { PreviewPlayer } from '@/components/timeline/PreviewPlayer';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+
 export function EditorPage() {
+  useKeyboardShortcuts();
+
   // Selector 세분화 — 각각 최소 slice만 구독하여 무관한 변경 시 리렌더 방지
   const title      = useStoryFrameStore((s) => s.project?.meta.title ?? 'Untitled Project');
   const cutCount   = useStoryFrameStore((s) => s.project?.cuts?.length ?? 0);
@@ -204,65 +209,72 @@ export function EditorPage() {
         <ViewToggle viewMode={viewMode} onSet={setViewMode} />
       </header>
 
-      {/* ── 컷 그리드 ── */}
-      <div className="flex-1 overflow-y-auto p-5 relative">
-        {cuts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-600">
-            <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-slate-700 flex items-center justify-center">
-              <LayoutGrid size={24} className="text-slate-700" />
-            </div>
-            <p className="text-sm">No cuts in this project.</p>
-            <p className="text-xs text-slate-700">Drag &amp; drop media files to import</p>
-          </div>
-        ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDragCancel={handleDragCancel}
-          >
-            <SortableContext items={cutIds} strategy={rectSortingStrategy}>
-              <div
-                className={clsx(
-                  'grid gap-4',
-                  viewMode === 'grid'
-                    ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5'
-                    : 'grid-cols-1 max-w-4xl mx-auto',
-                )}
-              >
-                {cuts.map((cut) => (
-                  <CutCard
-                    key={cut.id}
-                    cut={cut}
-                    viewMode={viewMode}
-                    isSelected={selectedCutId === cut.id}
-                    onClick={() => setSelectedCutId(cut.id)}
-                  />
-                ))}
+      {/* ── 컷 그리드 & 프리뷰 ── */}
+      <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 overflow-y-auto p-5 relative border-r border-slate-800">
+          {cuts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-600">
+              <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-slate-700 flex items-center justify-center">
+                <LayoutGrid size={24} className="text-slate-700" />
               </div>
-            </SortableContext>
-
-            {/* DragOverlay: 드래그 중 고스트를 Portal에 독립 렌더 → 그리드 리렌더 없음 */}
-            <DragOverlay
-              adjustScale={false}
-              dropAnimation={{
-                duration: 180,
-                easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
-              }}
+              <p className="text-sm">No cuts in this project.</p>
+              <p className="text-xs text-slate-700">Drag &amp; drop media files to import</p>
+            </div>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragCancel={handleDragCancel}
             >
-              {activeCut ? (
+              <SortableContext items={cutIds} strategy={rectSortingStrategy}>
                 <div
                   className={clsx(
-                    viewMode === 'grid' ? 'w-52' : 'w-full max-w-4xl',
+                    'grid gap-4',
+                    viewMode === 'grid'
+                      ? 'grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3'
+                      : 'grid-cols-1 max-w-4xl mx-auto',
                   )}
                 >
-                  <GhostCard cut={activeCut} />
+                  {cuts.map((cut) => (
+                    <CutCard
+                      key={cut.id}
+                      cut={cut}
+                      viewMode={viewMode}
+                      isSelected={selectedCutId === cut.id}
+                      onClick={() => setSelectedCutId(cut.id)}
+                    />
+                  ))}
                 </div>
-              ) : null}
-            </DragOverlay>
-          </DndContext>
-        )}
+              </SortableContext>
+
+              {/* DragOverlay: 드래그 중 고스트를 Portal에 독립 렌더 → 그리드 리렌더 없음 */}
+              <DragOverlay
+                adjustScale={false}
+                dropAnimation={{
+                  duration: 180,
+                  easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+                }}
+              >
+                {activeCut ? (
+                  <div
+                    className={clsx(
+                      viewMode === 'grid' ? 'w-52' : 'w-full max-w-4xl',
+                    )}
+                  >
+                    <GhostCard cut={activeCut} />
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+          )}
+        </div>
+        
+        {/* PreviewPlayer Section */}
+        <div className="w-[45%] shrink-0 p-4 bg-slate-950 flex flex-col">
+          <PreviewPlayer />
+        </div>
       </div>
 
       {/* ── PeekPanel ── */}
