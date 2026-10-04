@@ -1,30 +1,101 @@
 use std::fs;
-use serde_json::json;
 use std::path::Path;
 
-#[tauri::command]
-pub fn export_fcpxml(clips: Vec<String>, output_path: String) -> Result<(), String> {
-    let mut spine_content = String::new();
+use serde_json::json;
+use tauri::AppHandle;
+use uuid::Uuid;
 
-    for (i, clip) in clips.iter().enumerate() {
-        spine_content.push_str(&format!(
-            r#"                <asset-clip name="clip_{}" ref="r{}" offset="0s" duration="10s" format="r1" />
-"#,
-            i, i + 2
-        ));
+use crate::ffmpeg::probe_duration;
+
+// ── FCPXML 타임베이스: 30fps = frameDuration 100/3000s ──
+const TIMEBASE: u64 = 3000;
+const FRAME_TICKS: u64 = 100;
+
+/// 초 -> FCPXML Rational Time. 프레임 경계로 반올림 (예: 3.3333s -> "10000/3000s")
+fn to_rational(seconds: f64) -> String {
+    let frames = (seconds.max(0.0) * TIMEBASE as f64 / FRAME_TICKS as f64).round() as u64;
+    format!("{}/{}s", frames * FRAME_TICKS, TIMEBASE)
+}
+
+fn xml_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&apos;")
+}
+
+/// 로컬 경로 -> file:/// URL (Windows 역슬래시/공백/한글 퍼센트 인코딩)
+fn path_to_file_url(p: &str) -> String {
+    let norm = p.replace('\\', "/");
+    let mut enc = String::with_capacity(norm.len());
+    for b in norm.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9'
+            | b'-' | b'_' | b'.' | b'~' | b'/' | b':' => enc.push(b as char),
+            _ => enc.push_str(&format!("%{:02X}", b)),
+        }
     }
+    if enc.starts_with('/') {
+        format!("file://{}", enc) // unix: /a/b -> file:///a/b
+    } else {
+        format!("file:///{}", enc) // windows: C:/a -> file:///C:/a
+    }
+}
 
-    let mut resources = String::new();
-    resources.push_str(r#"        <format id="r1" name="FFVideoFormat1080p30" frameDuration="100/3000s" width="1920" height="1080" />
-"#);
+fn clip_name(path: &str, idx: usize) -> String {
+    Path::new(path)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| format!("clip_{}", idx))
+}
 
-    for (i, clip) in clips.iter().enumerate() {
-        let clip_path = Path::new(clip).to_str().unwrap_or("");
-        resources.push_str(&format!(
-            r#"        <asset id="r{}" name="clip_{}" src="file://{}" />
-"#,
-            i + 2, i, clip_path
+async fn probe_all(app: &AppHandle, clips: &[String]) -> Result<Vec<f64>, String> {
+    let mut v = Vec::with_capacity(clips.len());
+    for c in clips {
+        let d = probe_duration(app, c)
+            .await
+            .map_err(|e| format!("'{}' 길이 확인 실패: {}", c, e))?;
+        v.push(d);
+    }
+    Ok(v)
+}
+
+#[tauri::command]
+pub async fn export_fcpxml(
+    app: AppHandle,
+    clips: Vec<String>,
+    output_path: String,
+) -> Result<(), String> {
+    if clips.is_empty() {
+        return Err("No clips to export".to_string());
+    }
+    let durations = probe_all(&app, &clips).await?;
+
+    let mut resources = vec![format!(
+        r#"        <format id="r1" name="FFVideoFormat1080p30" frameDuration="{}" width="1920" height="1080"/>"#,
+        to_rational(FRAME_TICKS as f64 / TIMEBASE as f64)
+    )];
+    let mut spine: Vec<String> = Vec::new();
+    let mut offset = 0.0_f64;
+
+    for (i, (clip, dur)) in clips.iter().zip(&durations).enumerate() {
+        let id = format!("r{}", i + 2);
+        let name = xml_escape(&clip_name(clip, i));
+        let dur_r = to_rational(*dur);
+
+        resources.push(format!(
+            r#"        <asset id="{id}" name="{name}" start="0s" duration="{dur_r}" hasVideo="1" hasAudio="1" format="r1">
+            <media-rep kind="original-media" src="{src}"/>
+        </asset>"#,
+            src = xml_escape(&path_to_file_url(clip)),
         ));
+        spine.push(format!(
+            r#"                    <asset-clip ref="{id}" name="{name}" offset="{off}" start="0s" duration="{dur_r}" format="r1"/>"#,
+            off = to_rational(offset),
+        ));
+        offset += *dur; // 누적 offset
     }
 
     let xml = format!(
@@ -32,46 +103,81 @@ pub fn export_fcpxml(clips: Vec<String>, output_path: String) -> Result<(), Stri
 <!DOCTYPE fcpxml>
 <fcpxml version="1.11">
     <resources>
-{}    </resources>
-    <project name="StoryFrame Project">
-        <sequence format="r1" duration="0s">
-            <spine>
-{}            </spine>
-        </sequence>
-    </project>
-</fcpxml>"#,
-        resources, spine_content
+{resources}
+    </resources>
+    <library>
+        <event name="StoryFrame">
+            <project name="StoryFrame Project">
+                <sequence format="r1" duration="{total}" tcStart="0s" tcFormat="NDF">
+                    <spine>
+{spine}
+                    </spine>
+                </sequence>
+            </project>
+        </event>
+    </library>
+</fcpxml>
+"#,
+        resources = resources.join("\n"),
+        spine = spine.join("\n"),
+        total = to_rational(offset),
     );
 
-    fs::write(&output_path, xml).map_err(|e| e.to_string())?;
-    Ok(())
+    fs::write(&output_path, xml).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn export_capcut(clips: Vec<String>, output_path: String) -> Result<(), String> {
-    // Basic CapCut draft_content.json structure
-    let draft_content = json!({
-        "materials": {
-            "videos": clips.iter().map(|c| {
-                json!({
-                    "path": c,
-                    "type": "video"
-                })
-            }).collect::<Vec<_>>()
-        },
-        "tracks": [
-            {
-                "type": "video",
-                "segments": clips.iter().map(|c| {
-                    json!({
-                        "material_id": c
-                    })
-                }).collect::<Vec<_>>()
-            }
-        ]
+pub async fn export_capcut(
+    app: AppHandle,
+    clips: Vec<String>,
+    output_path: String,
+) -> Result<(), String> {
+    if clips.is_empty() {
+        return Err("No clips to export".to_string());
+    }
+    let durations = probe_all(&app, &clips).await?;
+    let to_us = |s: f64| (s * 1_000_000.0).round() as u64; // CapCut은 마이크로초 단위
+
+    let mut materials = Vec::new();
+    let mut segments = Vec::new();
+    let mut cursor_us: u64 = 0;
+
+    for (clip, dur) in clips.iter().zip(&durations) {
+        let material_id = Uuid::new_v4().to_string().to_uppercase();
+        let dur_us = to_us(*dur);
+
+        materials.push(json!({
+            "id": material_id,
+            "type": "video",
+            "path": clip,
+            "material_name": clip_name(clip, materials.len()),
+            "duration": dur_us
+        }));
+        segments.push(json!({
+            "id": Uuid::new_v4().to_string().to_uppercase(),
+            "material_id": material_id,
+            "source_timerange": { "start": 0, "duration": dur_us },  // In/Out (원본 구간)
+            "target_timerange": { "start": cursor_us, "duration": dur_us }, // 타임라인 배치
+            "speed": 1.0,
+            "volume": 1.0,
+            "visible": true
+        }));
+        cursor_us += dur_us;
+    }
+
+    // 주의: CapCut 초안 포맷은 비공식이며 버전별로 필드가 다릅니다 (최소 구조).
+    let draft = json!({
+        "id": Uuid::new_v4().to_string().to_uppercase(),
+        "fps": 30.0,
+        "duration": cursor_us,
+        "materials": { "videos": materials },
+        "tracks": [{
+            "id": Uuid::new_v4().to_string().to_uppercase(),
+            "type": "video",
+            "segments": segments
+        }]
     });
 
-    let json_str = serde_json::to_string_pretty(&draft_content).map_err(|e| e.to_string())?;
-    fs::write(&output_path, json_str).map_err(|e| e.to_string())?;
-    Ok(())
+    let s = serde_json::to_string_pretty(&draft).map_err(|e| e.to_string())?;
+    fs::write(&output_path, s).map_err(|e| e.to_string())
 }

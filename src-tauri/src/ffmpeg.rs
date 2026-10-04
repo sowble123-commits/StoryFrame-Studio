@@ -1,162 +1,211 @@
-use tauri::AppHandle;
-use tauri_plugin_shell::ShellExt;
-use serde_json::{json, Value};
+use std::collections::VecDeque;
+use std::sync::LazyLock;
 
-#[tauri::command]
-pub async fn check_ffmpeg(app: AppHandle) -> Result<String, String> {
-    let output = app.shell().sidecar("ffmpeg")
-        .map_err(|e| format!("Failed to create sidecar: {}", e))?
-        .arg("-version")
-        .output()
-        .await
-        .map_err(|e| format!("Failed to execute ffmpeg: {}", e))?;
-        
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    Ok(stdout.lines().next().unwrap_or("Unknown version").to_string())
+use regex::Regex;
+use serde_json::{json, Value};
+use tauri::{AppHandle, Emitter};
+use tauri_plugin_shell::process::CommandEvent;
+use tauri_plugin_shell::ShellExt;
+use uuid::Uuid;
+
+static TIME_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"time=(\d+):(\d{2}):(\d{2}(?:\.\d+)?)").unwrap());
+
+/// "time=00:00:05.12" -> 5.12 (한 청크에 여러 개면 마지막 값 사용)
+fn parse_progress_secs(line: &str) -> Option<f64> {
+    let c = TIME_RE.captures_iter(line).last()?;
+    let h: f64 = c[1].parse().ok()?;
+    let m: f64 = c[2].parse().ok()?;
+    let s: f64 = c[3].parse().ok()?;
+    Some(h * 3600.0 + m * 60.0 + s)
 }
 
-#[tauri::command]
-pub async fn generate_waveform(app: AppHandle, audio_path: String) -> Result<Value, String> {
-    // Basic implementation: attempt to run ffprobe or ffmpeg to check the file.
-    // In a real scenario, this would use a complex ffmpeg command to parse audiowaveform or astats.
-    // For now, we simulate extraction by confirming the file exists and returning a dummy json.
-    
-    let output = app.shell().sidecar("ffprobe")
+/// ffprobe로 미디어 길이(초) 조회
+pub async fn probe_duration(app: &AppHandle, path: &str) -> Result<f64, String> {
+    let out = app
+        .shell()
+        .sidecar("ffprobe")
         .map_err(|e| format!("Failed to create sidecar: {}", e))?
-        .args(vec!["-i", &audio_path, "-show_format", "-v", "quiet", "-of", "json"])
+        .args([
+            "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            path,
+        ])
         .output()
         .await
         .map_err(|e| format!("Failed to execute ffprobe: {}", e))?;
-        
-    if !output.status.success() {
-        return Err("Failed to read audio file with ffprobe".to_string());
+
+    if !out.status.success() {
+        return Err(String::from_utf8_lossy(&out.stderr).trim().to_string());
+    }
+    String::from_utf8_lossy(&out.stdout)
+        .trim()
+        .parse::<f64>()
+        .map_err(|e| format!("Invalid duration for '{}': {}", path, e))
+}
+
+#[tauri::command]
+pub async fn generate_waveform(
+    app: AppHandle,
+    audio_path: String,
+    buckets: Option<usize>,
+) -> Result<Value, String> {
+    const SAMPLE_RATE: u32 = 8000;
+    let buckets = buckets.unwrap_or(200).clamp(10, 4000);
+    let tmp = std::env::temp_dir().join(format!("sf_wave_{}.raw", Uuid::new_v4()));
+
+    let out = app
+        .shell()
+        .sidecar("ffmpeg")
+        .map_err(|e| format!("Failed to create sidecar: {}", e))?
+        .args([
+            "-y", "-v", "error",
+            "-i", audio_path.as_str(),
+            "-vn", "-ac", "1", "-ar", &SAMPLE_RATE.to_string(),
+            "-f", "s16le",
+            &tmp.to_string_lossy(),
+        ])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to execute ffmpeg: {}", e))?;
+
+    if !out.status.success() {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(String::from_utf8_lossy(&out.stderr).trim().to_string());
     }
 
-    // Dummy peak data for Phase 4 UI visualization
-    let peaks: Vec<f32> = (0..100).map(|i| (i as f32 / 100.0).sin().abs()).collect();
-    
+    let bytes = std::fs::read(&tmp).map_err(|e| format!("Failed to read PCM: {}", e));
+    let _ = std::fs::remove_file(&tmp);
+    let bytes = bytes?;
+
+    let samples: Vec<i16> = bytes
+        .chunks_exact(2)
+        .map(|c| i16::from_le_bytes([c[0], c[1]]))
+        .collect();
+    if samples.is_empty() {
+        return Err("No audio samples decoded".to_string());
+    }
+
+    let bucket_size = samples.len().div_ceil(buckets).max(1);
+    let peaks: Vec<f32> = samples
+        .chunks(bucket_size)
+        .map(|c| {
+            let max = c.iter().map(|s| (*s as i32).unsigned_abs()).max().unwrap_or(0);
+            (max as f32 / 32768.0).min(1.0)
+        })
+        .collect();
+
     Ok(json!({
         "peaks": peaks,
-        "length": peaks.len()
+        "length": peaks.len(),
+        "duration": samples.len() as f64 / SAMPLE_RATE as f64
     }))
 }
 
 #[tauri::command]
-pub async fn generate_thumbnail(app: AppHandle, video_path: String, output_path: String, time: Option<f64>) -> Result<String, String> {
-    let time_str = time.unwrap_or(0.0).to_string();
-    
-    let output = app.shell().sidecar("ffmpeg")
-        .map_err(|e| format!("Failed to create sidecar: {}", e))?
-        .args(vec![
-            "-y", 
-            "-i", &video_path,
-            "-ss", &time_str,
-            "-vframes", "1",
-            "-q:v", "2",
-            &output_path
-        ])
-        .output()
-        .await
-        .map_err(|e| format!("Failed to execute ffmpeg: {}", e))?;
-        
-    if !output.status.success() {
-        return Err(String::from_utf8_lossy(&output.stderr).into_owned());
-    }
-    
-    Ok(output_path)
-}
+pub async fn assemble_roughcut(
+    app: AppHandle,
+    clips: Vec<String>,
+    output_path: String,
+    total_duration: Option<f64>, // 프론트: totalDuration (생략 시 ffprobe 합산)
+) -> Result<String, String> {
+    use std::io::Write;
 
-#[tauri::command]
-pub async fn extract_last_frame(app: AppHandle, video_path: String, output_path: String) -> Result<String, String> {
-    // To get the last frame, we can use sseof or just use -vframes 1 from a specific point.
-    // For simplicity in this rough cut, we'll run a command that grabs the last frame.
-    // A common trick is `-sseof -3 -i ... -update 1 -q:v 2` but since it's an API, 
-    // we use a generic filter.
-    
-    let output = app.shell().sidecar("ffmpeg")
-        .map_err(|e| format!("Failed to create sidecar: {}", e))?
-        .args(vec![
-            "-y", 
-            "-sseof", "-0.1",
-            "-i", &video_path,
-            "-vframes", "1",
-            "-update", "1",
-            &output_path
-        ])
-        .output()
-        .await
-        .map_err(|e| format!("Failed to execute ffmpeg: {}", e))?;
-        
-    if !output.status.success() {
-        // Fallback: If sseof fails (some formats), try extracting at 0s
-        let fallback = app.shell().sidecar("ffmpeg")
-            .unwrap()
-            .args(vec![
-                "-y", 
-                "-i", &video_path,
-                "-vframes", "1",
-                &output_path
-            ])
-            .output()
-            .await;
-            
-        if let Ok(res) = fallback {
-            if !res.status.success() {
-                return Err(String::from_utf8_lossy(&res.stderr).into_owned());
+    if clips.is_empty() {
+        return Err("No clips to export".to_string());
+    }
+
+    // 전체 길이 확보
+    let total = match total_duration {
+        Some(d) if d > 0.0 => d,
+        _ => {
+            let mut sum = 0.0;
+            for c in &clips {
+                sum += probe_duration(&app, c).await.unwrap_or(0.0);
             }
-        } else {
-            return Err("Failed to extract frame".to_string());
+            sum
+        }
+    };
+
+    // 동시 실행 충돌 방지를 위해 고유 파일명 사용
+    let list_path = std::env::temp_dir().join(format!("sf_concat_{}.txt", Uuid::new_v4()));
+    {
+        let mut f = std::fs::File::create(&list_path)
+            .map_err(|e| format!("Failed to create list file: {}", e))?;
+        for clip in &clips {
+            let escaped = clip.replace('\'', "'\\''");
+            writeln!(f, "file '{}'", escaped)
+                .map_err(|e| format!("Failed to write list file: {}", e))?;
         }
     }
-    
-    Ok(output_path)
-}
 
-#[tauri::command]
-pub async fn assemble_roughcut(app: AppHandle, clips: Vec<String>, output_path: String) -> Result<String, String> {
-    use std::io::Write;
-    use tauri::Emitter;
-    use tokio::io::{AsyncBufReadExt, BufReader};
-    use std::process::Stdio;
-
-    let temp_dir = std::env::temp_dir();
-    let list_file_path = temp_dir.join("concat_list.txt");
-    
-    let mut file = std::fs::File::create(&list_file_path).map_err(|e| format!("Failed to create list file: {}", e))?;
-    for clip in &clips {
-        let escaped_path = clip.replace('\'', "'\\''");
-        writeln!(file, "file '{}'", escaped_path).map_err(|e| format!("Failed to write to list file: {}", e))?;
-    }
-
-    let (mut rx, child) = app.shell().sidecar("ffmpeg")
+    let spawn = app
+        .shell()
+        .sidecar("ffmpeg")
         .map_err(|e| format!("Failed to create sidecar: {}", e))?
-        .args(vec![
+        .args([
             "-y",
             "-f", "concat",
             "-safe", "0",
-            "-i", list_file_path.to_str().unwrap(),
+            "-i", &list_path.to_string_lossy(),
             "-c", "copy",
-            &output_path
+            output_path.as_str(),
         ])
-        .spawn()
-        .map_err(|e| format!("Failed to spawn ffmpeg: {}", e))?;
+        .spawn();
 
-    app.emit("render-progress", 0.0).unwrap_or(());
-    
+    let (mut rx, _child) = match spawn {
+        Ok(v) => v,
+        Err(e) => {
+            let _ = std::fs::remove_file(&list_path);
+            return Err(format!("Failed to spawn ffmpeg: {}", e));
+        }
+    };
+
+    let _ = app.emit("render-progress", 0.0_f64);
+
+    let mut tail: VecDeque<String> = VecDeque::with_capacity(20); // 에러 메시지용 stderr 마지막 줄들
+    let mut push_tail = |s: String| {
+        if tail.len() == 20 {
+            tail.pop_front();
+        }
+        tail.push_back(s);
+    };
+    let mut last_pct = -1.0_f64;
+    let mut success = false;
+
     while let Some(event) = rx.recv().await {
         match event {
-            tauri_plugin_shell::process::CommandEvent::Stderr(line) => {
-                let l = String::from_utf8_lossy(&line);
-                if l.contains("time=") || l.contains("frame=") {
-                    app.emit("render-progress", 50.0).unwrap_or(());
+            CommandEvent::Stderr(bytes) => {
+                let line = String::from_utf8_lossy(&bytes).to_string();
+                if let Some(cur) = parse_progress_secs(&line) {
+                    if total > 0.0 {
+                        // 완료 전에는 99%로 제한, 100%는 정상 종료 후에만 전송
+                        let pct = ((cur / total) * 100.0).clamp(0.0, 99.0);
+                        let pct = (pct * 10.0).round() / 10.0;
+                        if pct - last_pct >= 0.5 {
+                            last_pct = pct;
+                            let _ = app.emit("render-progress", pct);
+                        }
+                    }
+                } else if !line.trim().is_empty() {
+                    push_tail(line.trim().to_string());
                 }
+            }
+            CommandEvent::Error(e) => push_tail(e),
+            CommandEvent::Terminated(p) => {
+                success = p.code == Some(0);
+                break;
             }
             _ => {}
         }
     }
-    
-    // Once the channel is closed, the process should be finishing or finished.
-    // We don't have to wait on `child` typically if the channel is done, but we can.
-    app.emit("render-progress", 100.0).unwrap_or(());
+
+    let _ = std::fs::remove_file(&list_path);
+
+    if !success {
+        return Err(tail.into_iter().collect::<Vec<_>>().join("\n"));
+    }
+    let _ = app.emit("render-progress", 100.0_f64);
     Ok(output_path)
 }
