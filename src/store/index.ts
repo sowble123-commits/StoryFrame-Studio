@@ -28,6 +28,10 @@ interface StoryFrameStore {
   moveCut: (oldIndex: number, newIndex: number) => void;
   deleteCut: (id: string) => void;
   duplicateCut: (id: string) => void;
+  /** PeekPanel 양방향 바인딩: cut의 임의 필드를 부분 업데이트 */
+  updateCut: (id: string, patch: Partial<import('@/types/project').Cut>) => void;
+  /** 가챠 슬롯: 특정 컷의 비디오 버전 isSelected 스위칭 */
+  switchVideoVersion: (cutId: string, versionId: string) => void;
 }
 
 export const useStoryFrameStore = create<StoryFrameStore>()(
@@ -173,6 +177,27 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
         // Update indices
         state.project.cuts.forEach((cut, i) => {
           cut.index = i + 1;
+        });
+      });
+    },
+
+    updateCut: (id, patch) => {
+      set((state) => {
+        if (!state.project?.cuts) return;
+        const cut = state.project.cuts.find((c) => c.id === id);
+        if (!cut) return;
+        // immer draft에 shallow merge (중첩 필드는 스프레드)
+        Object.assign(cut, patch);
+      });
+    },
+
+    switchVideoVersion: (cutId, versionId) => {
+      set((state) => {
+        if (!state.project?.cuts) return;
+        const cut = state.project.cuts.find((c) => c.id === cutId);
+        if (!cut?.video?.versions) return;
+        cut.video.versions.forEach((v) => {
+          v.isSelected = v.versionId === versionId;
         });
       });
     },

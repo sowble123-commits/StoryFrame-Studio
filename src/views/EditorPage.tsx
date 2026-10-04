@@ -1,5 +1,4 @@
-
-import { useEffect } from 'react';
+import { useEffect, useRef, useState, useCallback, memo } from 'react';
 import { useStoryFrameStore } from '@/store';
 import { CutCard } from '@/components/CutCard';
 import { PeekPanel } from '@/components/PeekPanel';
@@ -14,131 +13,259 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
 } from '@dnd-kit/core';
 import {
   SortableContext,
   sortableKeyboardCoordinates,
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
+import type { Cut } from '@/types/project';
+
+// ─── DragOverlay에서 사용할 경량 고스트 카드 ──────────────────────────────────
+// DragOverlay는 Portal에서 렌더되므로 전체 그리드와 독립. memo로 재렌더 최소화.
+const GhostCard = memo(function GhostCard({ cut }: { cut: Cut }) {
+  return (
+    <div
+      className="
+        bg-slate-800 border border-blue-500 rounded-xl overflow-hidden
+        shadow-2xl ring-2 ring-blue-500/30 opacity-90
+        flex flex-col h-64 w-full pointer-events-none
+      "
+    >
+      <div className="h-32 bg-slate-900 border-b border-slate-700 flex items-center justify-center relative overflow-hidden">
+        {cut.illustration.primaryImagePath ? (
+          <img
+            src={cut.illustration.primaryImagePath}
+            alt=""
+            className="w-full h-full object-cover"
+            draggable={false}
+          />
+        ) : (
+          <div className="w-8 h-8 rounded bg-slate-700" />
+        )}
+        <div className="absolute top-2 left-2 bg-black/60 px-1.5 py-0.5 rounded text-xs font-mono text-slate-300">
+          C{String(cut.index).padStart(3, '0')}
+        </div>
+      </div>
+      <div className="p-3 flex-1">
+        <p className="text-sm text-slate-300 truncate font-medium">
+          {cut.story.description || 'No description'}
+        </p>
+      </div>
+    </div>
+  );
+});
+
+// ─── 뷰 모드 토글 버튼 ────────────────────────────────────────────────────────
+const ViewToggle = memo(function ViewToggle({
+  viewMode,
+  onSet,
+}: {
+  viewMode: 'grid' | 'list';
+  onSet: (m: 'grid' | 'list') => void;
+}) {
+  return (
+    <div
+      className="flex bg-slate-900 border border-slate-800 rounded-lg p-1"
+      role="group"
+      aria-label="보기 모드 선택"
+    >
+      {(['grid', 'list'] as const).map((mode) => (
+        <button
+          key={mode}
+          type="button"
+          onClick={() => onSet(mode)}
+          aria-pressed={viewMode === mode}
+          aria-label={mode === 'grid' ? '그리드 보기' : '리스트 보기'}
+          title={mode === 'grid' ? 'Grid View' : 'List View'}
+          className={clsx(
+            'p-1.5 rounded transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400',
+            viewMode === mode
+              ? 'bg-slate-700 text-slate-200'
+              : 'text-slate-500 hover:text-slate-300',
+          )}
+        >
+          {mode === 'grid' ? <LayoutGrid size={17} /> : <List size={17} />}
+        </button>
+      ))}
+    </div>
+  );
+});
+
+// ─── EditorPage ───────────────────────────────────────────────────────────────
 
 export function EditorPage() {
-  const { project, viewMode, setViewMode, moveCut, setSelectedCutId } = useStoryFrameStore();
+  // Selector 세분화 — 각각 최소 slice만 구독하여 무관한 변경 시 리렌더 방지
+  const title      = useStoryFrameStore((s) => s.project?.meta.title ?? 'Untitled Project');
+  const cutCount   = useStoryFrameStore((s) => s.project?.cuts?.length ?? 0);
+  const cutIds     = useStoryFrameStore((s) => s.project?.cuts?.map((c) => c.id) ?? []);
+  const cuts       = useStoryFrameStore((s) => s.project?.cuts ?? []);
+  const projectPath = useStoryFrameStore((s) => s.project?.projectPath);
+  const selectedCutId = useStoryFrameStore((s) => s.project?.uiState?.selectedCutId ?? null);
+  const viewMode   = useStoryFrameStore((s) => s.viewMode);
+  const setViewMode      = useStoryFrameStore((s) => s.setViewMode);
+  const moveCut          = useStoryFrameStore((s) => s.moveCut);
+  const setSelectedCutId = useStoryFrameStore((s) => s.setSelectedCutId);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
+  // 드래그 중인 컷 (고스트 렌더용)
+  const [activeCut, setActiveCut] = useState<Cut | null>(null);
+
+  // ── 파일 드롭 리스너 (메모리 릭 방지) ──────────────────────────────────────
+  // projectPath가 바뀔 때만 재등록하되, Promise를 ref에 보관해 cleanup에서 확실히 해제
+  const unlistenRef = useRef<ReturnType<typeof listen> | null>(null);
 
   useEffect(() => {
-    // Setup Tauri file drop listener
-    const unlisten = listen('tauri://drag-drop', async (event) => {
-      const payload = event.payload as { paths: string[] };
-      if (payload && payload.paths && project?.projectPath) {
-        console.log('Files dropped:', payload.paths);
-        const assetsDir = `${project.projectPath}/assets`;
-        
+    // 이전 리스너 해제
+    if (unlistenRef.current) {
+      unlistenRef.current.then((f) => f());
+    }
+
+    const registerListener = async () => {
+      const unlisten = listen('tauri://drag-drop', async (event) => {
+        const payload = event.payload as { paths: string[] };
+        if (!payload?.paths || !projectPath) return;
+
+        const assetsDir = `${projectPath}/assets`;
         try {
           await mkdir(assetsDir, { recursive: true });
-        } catch (e) {
-          console.log('Assets directory might already exist:', e);
+        } catch {
+          // 이미 존재하는 경우 무시
         }
 
         for (const filePath of payload.paths) {
           try {
-            const fileName = filePath.split(/[/\\]/).pop() || 'unknown';
-            const targetPath = `${assetsDir}/${fileName}`;
-            await copyFile(filePath, targetPath);
-            console.log('Copied file to:', targetPath);
-            // Here we could also create new cuts based on dropped files if needed
-          } catch (e) {
-            console.error('Failed to copy file:', e);
+            const fileName = filePath.split(/[/\\]/).pop() ?? 'unknown';
+            await copyFile(filePath, `${assetsDir}/${fileName}`);
+          } catch (err) {
+            console.error('[drop] Failed to copy:', filePath, err);
           }
         }
-      }
-    });
+      });
+      unlistenRef.current = Promise.resolve(await unlisten) as any;
+    };
+
+    registerListener();
 
     return () => {
-      unlisten.then(f => f());
+      // 컴포넌트 언마운트 or projectPath 변경 시 반드시 해제
+      if (unlistenRef.current) {
+        unlistenRef.current.then((f) => f());
+        unlistenRef.current = null;
+      }
     };
-  }, [project]);
+  }, [projectPath]); // project 전체 대신 projectPath만 의존
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    
-    if (over && active.id !== over.id && project?.cuts) {
-      const oldIndex = project.cuts.findIndex(c => c.id === active.id);
-      const newIndex = project.cuts.findIndex(c => c.id === over.id);
-      moveCut(oldIndex, newIndex);
-    }
-  };
+  // ── DnD 핸들러 ────────────────────────────────────────────────────────────
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
-  if (!project) return null;
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const found = cuts.find((c) => c.id === event.active.id);
+      setActiveCut(found ?? null);
+    },
+    [cuts],
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      setActiveCut(null);
+      const { active, over } = event;
+      if (over && active.id !== over.id) {
+        const oldIndex = cuts.findIndex((c) => c.id === active.id);
+        const newIndex = cuts.findIndex((c) => c.id === over.id);
+        if (oldIndex !== -1 && newIndex !== -1) {
+          moveCut(oldIndex, newIndex);
+        }
+      }
+    },
+    [cuts, moveCut],
+  );
+
+  const handleDragCancel = useCallback(() => setActiveCut(null), []);
+
+  // ── 빈 프로젝트 가드 ──────────────────────────────────────────────────────
+  if (!cutIds.length && !title) return null;
 
   return (
     <div className="flex flex-col h-full w-full bg-slate-950 overflow-hidden relative">
-      {/* Editor Header */}
-      <div className="flex justify-between items-center px-6 py-4 border-b border-slate-800 bg-slate-950/50">
-        <div>
-          <h2 className="text-xl font-bold text-slate-200">{project.meta.title || "Untitled Project"}</h2>
-          <p className="text-sm text-slate-500">{project.cuts?.length || 0} Cuts</p>
-        </div>
-        <div className="flex bg-slate-900 border border-slate-800 rounded-lg p-1">
-          <button
-            onClick={() => setViewMode('grid')}
-            className={clsx(
-              "p-1.5 rounded transition-colors",
-              viewMode === 'grid' ? "bg-slate-700 text-slate-200" : "text-slate-500 hover:text-slate-300"
-            )}
-            title="Grid View"
-          >
-            <LayoutGrid size={18} />
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={clsx(
-              "p-1.5 rounded transition-colors",
-              viewMode === 'list' ? "bg-slate-700 text-slate-200" : "text-slate-500 hover:text-slate-300"
-            )}
-            title="List View"
-          >
-            <List size={18} />
-          </button>
-        </div>
-      </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto p-6 relative">
-        {(!project.cuts || project.cuts.length === 0) ? (
-          <div className="flex flex-col items-center justify-center h-full text-slate-500">
-            <p>No cuts found in this project.</p>
-            <p className="text-xs mt-2">Drag and drop media files here to import</p>
+      {/* ── 에디터 헤더 ── */}
+      <header className="flex justify-between items-center px-6 py-3.5 border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm shrink-0">
+        <div>
+          <h2 className="text-lg font-bold text-slate-200 leading-tight">{title}</h2>
+          <p className="text-xs text-slate-500 mt-0.5">{cutCount} Cuts</p>
+        </div>
+        <ViewToggle viewMode={viewMode} onSet={setViewMode} />
+      </header>
+
+      {/* ── 컷 그리드 ── */}
+      <div className="flex-1 overflow-y-auto p-5 relative">
+        {cuts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-600">
+            <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-slate-700 flex items-center justify-center">
+              <LayoutGrid size={24} className="text-slate-700" />
+            </div>
+            <p className="text-sm">No cuts in this project.</p>
+            <p className="text-xs text-slate-700">Drag &amp; drop media files to import</p>
           </div>
         ) : (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={project.cuts.map(c => c.id)} strategy={rectSortingStrategy}>
-              <div className={clsx(
-                "grid gap-4",
-                viewMode === 'grid' 
-                  ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
-                  : "grid-cols-1 max-w-4xl mx-auto"
-              )}>
-                {project.cuts.map((cut) => (
-                  <CutCard 
-                    key={cut.id} 
-                    cut={cut} 
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
+          >
+            <SortableContext items={cutIds} strategy={rectSortingStrategy}>
+              <div
+                className={clsx(
+                  'grid gap-4',
+                  viewMode === 'grid'
+                    ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5'
+                    : 'grid-cols-1 max-w-4xl mx-auto',
+                )}
+              >
+                {cuts.map((cut) => (
+                  <CutCard
+                    key={cut.id}
+                    cut={cut}
                     viewMode={viewMode}
-                    isSelected={project.uiState?.selectedCutId === cut.id}
+                    isSelected={selectedCutId === cut.id}
                     onClick={() => setSelectedCutId(cut.id)}
                   />
                 ))}
               </div>
             </SortableContext>
+
+            {/* DragOverlay: 드래그 중 고스트를 Portal에 독립 렌더 → 그리드 리렌더 없음 */}
+            <DragOverlay
+              adjustScale={false}
+              dropAnimation={{
+                duration: 180,
+                easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+              }}
+            >
+              {activeCut ? (
+                <div
+                  className={clsx(
+                    viewMode === 'grid' ? 'w-52' : 'w-full max-w-4xl',
+                  )}
+                >
+                  <GhostCard cut={activeCut} />
+                </div>
+              ) : null}
+            </DragOverlay>
           </DndContext>
         )}
       </div>
 
-      {/* Peek Panel (Slide-in) */}
+      {/* ── PeekPanel ── */}
       <PeekPanel />
     </div>
   );
