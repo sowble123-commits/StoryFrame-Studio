@@ -4,7 +4,11 @@
 
 ## 1. 작업 전 컨텍스트 동기화 및 실행 허가 (Permission)
 - 모든 백그라운드 에이전트는 코딩을 시작하기 전, 반드시 기획서(`PLAN.md`, `PRD.md`)를 읽어야 합니다.
-- **[전공 참고서 필독]** 에이전트의 역할에 따라 `docs/references/` 내의 해당 문서를 반드시 정독해야 합니다. (프론트엔드는 `frontend_ui_research.md` / `frontend_logic_research.md`, 백엔드는 `backend_core_research.md`, 타임라인 엔진은 `media_engine_research.md`). 오케스트레이터는 에이전트 호출 시 이를 지시해야 합니다.
+- **[4대 전담 에이전트 및 참고서 필독]** 개발은 아래 4명의 전문 에이전트(Agent)로 역할을 분담하며, 오케스트레이터는 호출 시 각자 전담 기술 문서(`docs/references/`)를 반드시 정독하도록 지시해야 합니다:
+  1. **UI 에이전트**: React, Tailwind 화면 렌더링 담당 👉 `frontend_ui_research.md` 필독
+  2. **로직 에이전트**: Zustand 상태 관리, IPC 통신 담당 👉 `frontend_logic_research.md` 필독
+  3. **코어 에이전트**: Tauri 뼈대, Rust 파일 시스템 제어 담당 👉 `backend_core_research.md` 필독
+  4. **미디어 에이전트**: FFmpeg 제어, 파형 추출, 내보내기 담당 👉 `media_engine_research.md` 필독
 - **[실행 허가 필수]** 오케스트레이터 및 에이전트는 파일을 삭제/롤백하거나, 새로운 에이전트를 백그라운드에 띄우거나, 코드를 대거 변경하는 등 **'실제 행동(Action)'으로 옮기기 전에는 반드시 사용자에게 의견을 묻고 명시적인 허락(Permission)을 구해야 합니다.** 파일 읽기(조회)는 허락 없이 자유롭게 가능합니다.
 
 ## 2. 세션 교체 (킬 & 인보크) 및 상태 로깅

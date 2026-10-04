@@ -27,6 +27,16 @@
         { "path": "$DOCUMENT/**" },
         { "path": "**" }
       ]
+    },
+    "shell:default",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        { "args": true, "name": "bin/ffmpeg" },
+        { "args": true, "name": "bin/ffprobe" },
+        { "args": true, "name": "ffmpeg" },
+        { "args": true, "name": "ffprobe" }
+      ]
     }
   ]
 }
