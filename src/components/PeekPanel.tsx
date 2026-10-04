@@ -114,14 +114,16 @@ export function PeekPanel() {
             <h3 className="text-base font-semibold text-slate-200 font-mono">
               C{String(cut.index).padStart(3, '0')}
             </h3>
-            <button
+            <motion.button
               type="button"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setSelectedCutId(null)}
               aria-label="패널 닫기"
-              className="text-slate-400 hover:text-slate-100 p-1.5 rounded-md hover:bg-slate-700 transition-colors"
+              className="text-slate-400 hover:text-slate-100 p-1.5 rounded-md hover:bg-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             >
               <X size={16} />
-            </button>
+            </motion.button>
           </div>
 
           {/* ── 스크롤 바디 ── */}

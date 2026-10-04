@@ -1,6 +1,7 @@
 mod commands;
 mod ffmpeg;
 mod export;
+mod watcher;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -10,6 +11,9 @@ fn greet(name: &str) -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(watcher::WatcherState {
+            stop_tx: std::sync::Mutex::new(None),
+        })
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -26,7 +30,8 @@ pub fn run() {
             ffmpeg::extract_last_frame,
             ffmpeg::assemble_roughcut,
             export::export_fcpxml,
-            export::export_capcut
+            export::export_capcut,
+            watcher::watch_project
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

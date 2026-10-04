@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback, memo } from 'react';
 import { useStoryFrameStore } from '@/store';
+import { useShallow } from 'zustand/react/shallow';
 import { CutCard } from '@/components/CutCard';
 import { PeekPanel } from '@/components/PeekPanel';
 import { LayoutGrid, List } from 'lucide-react';
@@ -106,14 +107,11 @@ export function EditorPage() {
   // Selector 세분화 — 각각 최소 slice만 구독하여 무관한 변경 시 리렌더 방지
   const title      = useStoryFrameStore((s) => s.project?.meta.title ?? 'Untitled Project');
   const cutCount   = useStoryFrameStore((s) => s.project?.cuts?.length ?? 0);
-  const cutIds     = useStoryFrameStore((s) => s.project?.cuts?.map((c) => c.id) ?? []);
-  const cuts       = useStoryFrameStore((s) => s.project?.cuts ?? []);
+  const cutIds     = useStoryFrameStore(useShallow((s) => s.project?.cuts?.map((c) => c.id) ?? []));
   const projectPath = useStoryFrameStore((s) => s.project?.projectPath);
-  const selectedCutId = useStoryFrameStore((s) => s.project?.uiState?.selectedCutId ?? null);
   const viewMode   = useStoryFrameStore((s) => s.viewMode);
   const setViewMode      = useStoryFrameStore((s) => s.setViewMode);
   const moveCut          = useStoryFrameStore((s) => s.moveCut);
-  const setSelectedCutId = useStoryFrameStore((s) => s.setSelectedCutId);
 
   // 드래그 중인 컷 (고스트 렌더용)
   const [activeCut, setActiveCut] = useState<Cut | null>(null);
@@ -171,10 +169,11 @@ export function EditorPage() {
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
-      const found = cuts.find((c) => c.id === event.active.id);
+      const currentCuts = useStoryFrameStore.getState().project?.cuts ?? [];
+      const found = currentCuts.find((c) => c.id === event.active.id);
       setActiveCut(found ?? null);
     },
-    [cuts],
+    [],
   );
 
   const handleDragEnd = useCallback(
@@ -182,14 +181,15 @@ export function EditorPage() {
       setActiveCut(null);
       const { active, over } = event;
       if (over && active.id !== over.id) {
-        const oldIndex = cuts.findIndex((c) => c.id === active.id);
-        const newIndex = cuts.findIndex((c) => c.id === over.id);
+        const currentCuts = useStoryFrameStore.getState().project?.cuts ?? [];
+        const oldIndex = currentCuts.findIndex((c) => c.id === active.id);
+        const newIndex = currentCuts.findIndex((c) => c.id === over.id);
         if (oldIndex !== -1 && newIndex !== -1) {
           moveCut(oldIndex, newIndex);
         }
       }
     },
-    [cuts, moveCut],
+    [moveCut],
   );
 
   const handleDragCancel = useCallback(() => setActiveCut(null), []);
@@ -212,7 +212,7 @@ export function EditorPage() {
       {/* ── 컷 그리드 & 프리뷰 ── */}
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 overflow-y-auto p-5 relative border-r border-slate-800">
-          {cuts.length === 0 ? (
+          {cutIds.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-600">
               <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-slate-700 flex items-center justify-center">
                 <LayoutGrid size={24} className="text-slate-700" />
@@ -237,13 +237,11 @@ export function EditorPage() {
                       : 'grid-cols-1 max-w-4xl mx-auto',
                   )}
                 >
-                  {cuts.map((cut) => (
-                    <CutCard
-                      key={cut.id}
-                      cut={cut}
+                  {cutIds.map((id) => (
+                    <CutCardWrapper
+                      key={id}
+                      id={id}
                       viewMode={viewMode}
-                      isSelected={selectedCutId === cut.id}
-                      onClick={() => setSelectedCutId(cut.id)}
                     />
                   ))}
                 </div>
@@ -280,5 +278,23 @@ export function EditorPage() {
       {/* ── PeekPanel ── */}
       <PeekPanel />
     </div>
+  );
+}
+
+
+function CutCardWrapper({ id, viewMode }: { id: string, viewMode: 'grid' | 'list' }) {
+  const cut = useStoryFrameStore((s) => s.project?.cuts?.find(c => c.id === id));
+  const isSelected = useStoryFrameStore((s) => s.project?.uiState?.selectedCutId === id);
+  const setSelectedCutId = useStoryFrameStore((s) => s.setSelectedCutId);
+
+  if (!cut) return null;
+
+  return (
+    <CutCard
+      cut={cut}
+      viewMode={viewMode}
+      isSelected={isSelected}
+      onClick={() => setSelectedCutId(id)}
+    />
   );
 }

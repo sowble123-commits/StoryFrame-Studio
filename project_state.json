@@ -18,7 +18,9 @@
     "pendingTasks": [
       { "cutId": "cut-19", "task": "video_generation", "note": "댄스 모션 재시도 필요" },
       { "cutId": "cut-22", "task": "illustration", "note": "배경 무드 미확정" },
-      { "cutId": "system", "task": "storyboard", "note": "Phase 4 FFmpeg 파이프라인 및 내보내기 리팩토링 및 통합 완료 (Claude 4.6 Sonnet 적용)" }
+      { "cutId": "system", "task": "storyboard", "note": "Phase 4 FFmpeg 파이프라인 및 내보내기 리팩토링 및 통합 완료 (Claude 4.6 Sonnet 적용)" },
+      { "cutId": "system", "task": "phase5", "note": "P5-01 (useExternalSync debouncing), P5-05 (Zustand shallow render optimization), P5-06 (Global ErrorBoundary & Toast notification), P5-07 (Windows MSI packaging) 완료" },
+      { "cutId": "system", "task": "phase5_ui", "note": "P5-02 (Sidebar metadata rendering), P5-03 (sfMotion Framer Motion animations), P5-04 (A11y focus rings, ARIA labels, tab flow) 완료" }
     ]
   },
   "music": {

@@ -35,16 +35,16 @@ class TrimSafePointerSensor extends PointerSensor {
 
 const restrictToHorizontalAxis: Modifier = ({ transform }) => ({ ...transform, y: 0 });
 
+import { useShallow } from 'zustand/react/shallow';
+
 export function VideoTrack({ pixelsPerSecond }: { pixelsPerSecond: number }) {
-  const cuts = useStoryFrameStore((s) => s.project?.cuts);
+  const ids = useStoryFrameStore(useShallow((s) => s.project?.cuts?.map((c) => c.id) ?? []));
   const moveCut = useStoryFrameStore((s) => s.moveCut);
 
   const sensors = useSensors(
     useSensor(TrimSafePointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
-
-  const ids = useMemo(() => (cuts ?? []).map((c) => c.id), [cuts]);
 
   const handleDragEnd = useCallback(
     ({ active, over }: DragEndEvent) => {
@@ -66,8 +66,8 @@ export function VideoTrack({ pixelsPerSecond }: { pixelsPerSecond: number }) {
       >
         <SortableContext items={ids} strategy={horizontalListSortingStrategy}>
           <div className="flex h-full items-center">
-            {(cuts ?? []).map((cut) => (
-              <TimelineClip key={cut.id} cut={cut} pixelsPerSecond={pixelsPerSecond} />
+            {ids.map((id) => (
+              <TimelineClip key={id} id={id} pixelsPerSecond={pixelsPerSecond} />
             ))}
           </div>
         </SortableContext>

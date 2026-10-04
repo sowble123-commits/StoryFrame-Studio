@@ -28,6 +28,8 @@ interface StoryFrameStore {
   moveCut: (oldIndex: number, newIndex: number) => void;
   deleteCut: (id: string) => void;
   duplicateCut: (id: string) => void;
+  /** 외부 변경 감지 시 병합을 위한 액션 */
+  mergeProject: (path: string) => Promise<void>;
   /** PeekPanel 양방향 바인딩: cut의 임의 필드를 부분 업데이트 */
   updateCut: (id: string, patch: Partial<import('@/types/project').Cut>) => void;
   /** 가챠 슬롯: 특정 컷의 비디오 버전 isSelected 스위칭 */
@@ -81,6 +83,9 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
           state.isLoading = false;
         });
         get().loadRecentProjects();
+        if ((data as any).projectPath) {
+            await invoke('watch_project', { path: (data as any).projectPath }).catch(console.error);
+        }
       } catch (err: any) {
         set((state) => {
           state.error = err.toString();
@@ -113,11 +118,35 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
           state.isLoading = false;
         });
         get().loadRecentProjects();
+        if ((data as any).projectPath) {
+            await invoke('watch_project', { path: (data as any).projectPath }).catch(console.error);
+        }
       } catch (err: any) {
         set((state) => {
           state.error = err.toString();
           state.isLoading = false;
         });
+      }
+    },
+    mergeProject: async (path) => {
+      try {
+        const data = await invoke<ProjectState>('open_project', { path });
+        set((state) => {
+          if (state.project) {
+            const currentUiState = state.project.uiState;
+            state.project = data;
+            state.project.uiState = { ...data.uiState, ...currentUiState };
+            // Ensure selectedCutId still exists
+            if (state.project.uiState.selectedCutId) {
+              const exists = state.project.cuts.some(c => c.id === state.project!.uiState.selectedCutId);
+              if (!exists) state.project.uiState.selectedCutId = null;
+            }
+          } else {
+            state.project = data;
+          }
+        });
+      } catch (err) {
+        console.error('Failed to merge project:', err);
       }
     },
     saveProject: async (path) => {

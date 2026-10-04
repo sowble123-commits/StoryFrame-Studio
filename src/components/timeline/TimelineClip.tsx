@@ -8,7 +8,7 @@ import { GripVertical } from 'lucide-react';
 import { clamp, snapToBeat } from '@/lib/timelineMath';
 
 interface TimelineClipProps {
-  cut: Cut;
+  id: string;
   pixelsPerSecond: number;
 }
 
@@ -16,14 +16,16 @@ const MIN_CLIP_SEC = 0.1;
 
 type Edge = 'in' | 'out';
 
-export const TimelineClip = memo(function TimelineClip({ cut, pixelsPerSecond }: TimelineClipProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cut.id });
-
+export const TimelineClip = memo(function TimelineClip({ id, pixelsPerSecond }: TimelineClipProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  
+  const cut = useStoryFrameStore((s) => s.project?.cuts?.find((c) => c.id === id));
   const updateCutTimeline = useStoryFrameStore((s) => s.updateCutTimeline);
   const setSelectedCutId  = useStoryFrameStore((s) => s.setSelectedCutId);
   const switchVideoVersion = useStoryFrameStore((s) => s.switchVideoVersion);
-  // boolean selector: 선택이 바뀐 클립만 리렌더
-  const isSelected = useStoryFrameStore((s) => s.project?.uiState?.selectedCutId === cut.id);
+  const isSelected = useStoryFrameStore((s) => s.project?.uiState?.selectedCutId === id);
+
+  if (!cut) return null;
 
   const activeVersion = cut.video.versions?.find((v) => v.isSelected) ?? cut.video.versions?.[0];
   const thumbnail = activeVersion?.thumbnailPath || cut.illustration.primaryImagePath;

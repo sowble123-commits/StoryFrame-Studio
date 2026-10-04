@@ -3,6 +3,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { save } from '@tauri-apps/plugin-dialog';
 import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
+import { sfMotion } from '@/lib/motion';
 
 interface ExportDialogProps {
   isOpen: boolean;
@@ -34,13 +36,13 @@ class ExportErrorBoundary extends React.Component<
   render() {
     if (!this.state.error) return this.props.children;
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white p-6 rounded-lg w-96 text-black shadow-lg">
-          <h2 className="text-lg font-bold mb-2 text-red-600">Export dialog crashed</h2>
-          <pre className="text-xs bg-red-50 border border-red-200 rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap">
+      <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="bg-slate-900 border border-slate-800 p-6 rounded-lg w-96 text-slate-200 shadow-xl">
+          <h2 className="text-lg font-bold mb-2 text-red-500">Export dialog crashed</h2>
+          <pre className="text-xs bg-red-950/50 border border-red-900 rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap">
             {this.state.error.message}
           </pre>
-          <button className="mt-4 px-4 py-2 border rounded hover:bg-gray-100" onClick={this.props.onClose}>
+          <button className="mt-4 px-4 py-2 border border-slate-700 rounded hover:bg-slate-800 transition-colors" onClick={this.props.onClose}>
             Close
           </button>
         </div>
@@ -105,12 +107,22 @@ const ExportDialogInner: React.FC<ExportDialogProps> = ({ isOpen, onClose, clips
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg w-96 text-black shadow-lg" role="dialog" aria-modal="true">
-        <h2 className="text-xl font-bold mb-4">Export Project</h2>
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div 
+          key="overlay"
+          {...sfMotion.fade}
+          className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50"
+        >
+          <motion.div 
+            key="dialog"
+            {...sfMotion.modal}
+            className="bg-slate-900 border border-slate-800 p-6 rounded-lg w-96 text-slate-200 shadow-xl" 
+            role="dialog" 
+            aria-modal="true"
+          >
+            <h2 className="text-xl font-bold mb-4">Export Project</h2>
 
         <div className="flex flex-col gap-2 mb-6">
           {(Object.keys(EXPORT_CONFIG) as ExportType[]).map((type) => (
@@ -168,22 +180,24 @@ const ExportDialogInner: React.FC<ExportDialogProps> = ({ isOpen, onClose, clips
 
         <div className="flex justify-end gap-2 mt-4">
           <button
-            className="px-4 py-2 border rounded hover:bg-gray-100 disabled:opacity-50"
+            className="px-4 py-2 border border-slate-700 rounded hover:bg-slate-800 disabled:opacity-50 transition-colors"
             onClick={handleClose}
             disabled={isExporting}
           >
             Cancel
           </button>
           <button
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
             onClick={handleExport}
             disabled={isExporting || clips.length === 0}
           >
             {isExporting ? 'Exporting...' : errorMessage ? 'Retry' : 'Export'}
           </button>
         </div>
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 
