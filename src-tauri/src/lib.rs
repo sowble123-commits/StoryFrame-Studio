@@ -11,9 +11,7 @@ fn greet(name: &str) -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .manage(watcher::WatcherState {
-            stop_tx: std::sync::Mutex::new(None),
-        })
+        .manage(watcher::WatcherState::default())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -31,7 +29,8 @@ pub fn run() {
             ffmpeg::assemble_roughcut,
             export::export_fcpxml,
             export::export_capcut,
-            watcher::watch_project
+            watcher::watch_project,
+            watcher::unwatch_project
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
