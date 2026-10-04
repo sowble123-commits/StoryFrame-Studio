@@ -1,0 +1,126 @@
+{
+  "$schema": "storyframe://project_state.v1",
+  "version": "1.0.0",
+  "meta": {
+    "id": "uuid-v4",
+    "title": "Night Goes On",
+    "genre": "Lo-Fi Jazz MV",
+    "createdAt": "2026-10-01T14:30:00+09:00",
+    "updatedAt": "2026-10-04T22:15:00+09:00",
+    "synopsis": "새벽 2시, 빈 재즈바에서...",
+    "targetDurationSec": 75.0,
+    "thumbnailPath": "assets/thumbnail.webp"
+  },
+  "progress": {
+    "phase": "video_generation",
+    "totalCuts": 24,
+    "completedCuts": 18,
+    "pendingTasks": [
+      { "cutId": "cut-19", "task": "video_generation", "note": "댄스 모션 재시도 필요" },
+      { "cutId": "cut-22", "task": "illustration", "note": "배경 무드 미확정" },
+      { "cutId": "system", "task": "storyboard", "note": "Phase 1 UI 설정 완료 (React 19 + Tailwind v4 OKLCH 테마 설정 및 초기 컴포넌트 마이그레이션)" }
+    ]
+  },
+  "music": {
+    "filePath": "assets/audio/night_goes_on_master.mp3",
+    "durationSec": 75.0,
+    "bpm": 82,
+    "waveformCachePath": "cache/waveform.json",
+    "beatMarkers": [
+      { "timeSec": 0.0, "type": "kick" },
+      { "timeSec": 0.731, "type": "snare" },
+      { "timeSec": 1.463, "type": "kick" }
+    ],
+    "sections": [
+      { "id": "section-1", "label": "Intro", "startSec": 0.0, "endSec": 8.5, "lyrics": "" },
+      { "id": "section-2", "label": "Verse 1", "startSec": 8.5, "endSec": 24.0, "lyrics": "밤이 깊어갈수록 재즈바는 비어가고..." }
+    ]
+  },
+  "globalAssets": {
+    "characterSheets": [
+      {
+        "id": "char-01",
+        "name": "주인공 (재즈 피아니스트)",
+        "frontRefPath": "assets/characters/char01_front.png",
+        "sideRefPath": "assets/characters/char01_side.png",
+        "styleNotes": "30대 남성, 검은 터틀넥, 슬림 체형"
+      }
+    ],
+    "moodboards": [
+      {
+        "id": "mood-01",
+        "label": "재즈바 인테리어",
+        "imagePaths": ["assets/moodboard/jazzbar_01.jpg", "assets/moodboard/jazzbar_02.jpg"],
+        "notes": "어두운 앰버 조명, 빈티지 우드 인테리어"
+      }
+    ]
+  },
+  "cuts": [
+    {
+      "id": "cut-01",
+      "index": 1,
+      "sectionId": "section-1",
+      "story": {
+        "description": "빈 재즈바 전경. 연기 자욱한 공기 사이로 무대 스팟 조명만 비춤.",
+        "lyrics": "",
+        "timeRange": { "startSec": 0.0, "endSec": 3.0 }
+      },
+      "illustration": {
+        "status": "approved",
+        "primaryImagePath": "assets/cuts/cut01/I01_start.png",
+        "variantPaths": [],
+        "characterRefs": ["char-01"],
+        "moodboardRefs": ["mood-01"],
+        "camera": { "angle": "Wide Shot", "movement": "Slow Zoom In", "notes": "" }
+      },
+      "video": {
+        "status": "selected",
+        "motionDifficulty": "safe",
+        "motionDescription": "정적 장면 + 느린 줌인. 연기 파티클만 움직임.",
+        "versions": [
+          {
+            "versionId": "v1",
+            "filePath": "assets/cuts/cut01/V01_v1.mp4",
+            "durationSec": 5.0,
+            "generatedBy": "Kling v2.1",
+            "generatedAt": "2026-10-03T10:00:00+09:00",
+            "isSelected": true,
+            "thumbnailPath": "assets/cuts/cut01/V01_v1_thumb.webp",
+            "notes": "줌 속도 적절. 채택."
+          },
+          {
+            "versionId": "v2",
+            "filePath": "assets/cuts/cut01/V01_v2.mp4",
+            "durationSec": 5.0,
+            "generatedBy": "Kling v2.1",
+            "generatedAt": "2026-10-03T10:15:00+09:00",
+            "isSelected": false,
+            "thumbnailPath": "assets/cuts/cut01/V01_v2_thumb.webp",
+            "notes": "줌 너무 빠름. 보류."
+          }
+        ],
+        "lastFramePath": "assets/cuts/cut01/V01_v1_lastframe.png"
+      },
+      "timeline": {
+        "inPointSec": 0.2,
+        "outPointSec": 3.0,
+        "effectiveDurationSec": 2.8,
+        "absoluteStartSec": 0.0,
+        "transitionIn": "cut",
+        "transitionOut": "cut"
+      }
+    }
+  ],
+  "roughCut": {
+    "lastAssembledAt": "2026-10-04T21:30:00+09:00",
+    "outputPath": "output/roughcut_latest.mp4",
+    "totalDurationSec": 68.4,
+    "cutOrder": ["cut-01", "cut-02", "cut-03"]
+  },
+  "uiState": {
+    "selectedCutId": "cut-05",
+    "sidebarCollapsed": false,
+    "timelineZoom": 1.0,
+    "gridColumns": 4
+  }
+}

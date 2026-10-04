@@ -1,0 +1,14 @@
+{
+  "$schema": "../gen/schemas/remote-schema.json",
+  "identifier": "remote-dev-access",
+  "description": "로컬 개발 서버를 위한 IPC 브릿지 허용",
+  "windows": ["main"],
+  "remote": {
+    "urls": ["http://localhost:*/**"]
+  },
+  "permissions": [
+    "core:default",
+    "fs:default",
+    "dialog:default"
+  ]
+}

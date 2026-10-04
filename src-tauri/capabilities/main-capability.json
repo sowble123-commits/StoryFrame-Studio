@@ -1,0 +1,32 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-capability",
+  "description": "메인 윈도우에 대한 시스템 접근 권한 및 제한적 파일 제어 코어 API",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:window:default",
+    "core:path:default",
+    "fs:default",
+    "dialog:default",
+    {
+      "identifier": "fs:allow-read",
+      "allow": [
+        { "path": "$APPDATA/StoryFrameStudio/**" },
+        { "path": "$DOCUMENT/**" },
+        { "path": "**" } 
+      ]
+    },
+    {
+      "identifier": "fs:allow-write",
+      "allow": [
+        { "path": "$APPDATA/StoryFrameStudio/**" },
+        { "path": "$DOCUMENT/**" },
+        { "path": "**" }
+      ]
+    }
+  ]
+}
