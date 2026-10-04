@@ -1,27 +1,21 @@
-import { useTheme } from "./hooks/useTheme";
-import { ThemeToggle } from "./components/ThemeToggle";
-import { GreetForm } from "./components/GreetForm";
+import { AppShell } from '@/components/layout/AppShell';
+import { useStoryFrameStore } from '@/store';
 
 function App() {
-  const { isDark, toggle } = useTheme();
-
+  const loadProject = useStoryFrameStore((state) => state.loadProject);
+  
   return (
-    <main className="min-h-screen bg-canvas text-text-primary p-8 flex flex-col items-center justify-center font-sans transition-colors duration-300">
-      <div className="bg-surface-1 border border-border p-8 rounded-2xl shadow-xl max-w-xl w-full text-center space-y-6">
-        <header className="space-y-2">
-          <h1 className="text-3xl font-bold text-accent">
-            StoryFrame Studio
-          </h1>
-          <p className="text-text-secondary text-sm">
-            React 19 + Tauri 2.x + Tailwind v4 (OKLCH) Setup Complete.
-          </p>
-        </header>
-
-        <ThemeToggle isDark={isDark} onToggle={toggle} />
-
-        <GreetForm />
+    <AppShell>
+      <div className="flex flex-col items-center justify-center h-full text-slate-500">
+        <p>Main Workspace Area</p>
+        <button 
+          onClick={() => loadProject('project_state.json')}
+          className="mt-4 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded transition-colors cursor-pointer"
+        >
+          Load Project State
+        </button>
       </div>
-    </main>
+    </AppShell>
   );
 }
 

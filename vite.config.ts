@@ -5,9 +5,16 @@ import tailwindcss from "@tailwindcss/vite";
 import process from "node:process";
 const host = process.env.TAURI_DEV_HOST;
 
+import path from "node:path";
+
 // https://vite.dev/config/
 export default defineConfig(() => ({
   plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
