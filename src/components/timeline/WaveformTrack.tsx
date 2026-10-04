@@ -1,32 +1,79 @@
-import { memo, useEffect, useMemo, useRef } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { useStoryFrameStore } from '@/store';
+import { resolveProjectPath } from '@/lib/utils';
 
 const TRACK_HEIGHT = 64;
 const BAR_STEP = 4; // CSS px
 /** 브라우저 canvas 최대 치수(안전값). 초과 시 화면에 보이는 영역만 그린다. */
 const MAX_CANVAS_WIDTH = 16000;
 
-/** 결정론적 의사난수(mulberry32) — 렌더마다 파형이 바뀌는 Math.random 제거 */
-function mulberry32(seed: number) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+/**
+ * 백엔드 `generate_waveform` 응답을 0..1로 정규화된 Float32Array로 변환.
+ * 허용 형식: number[] | { peaks: number[] }
+ */
+function normalizePeaks(raw: unknown): Float32Array {
+  const arr: ArrayLike<number> = Array.isArray(raw)
+    ? raw
+    : Array.isArray((raw as { peaks?: unknown } | null)?.peaks)
+      ? (raw as { peaks: number[] }).peaks
+      : [];
+  const out = new Float32Array(arr.length);
+  let max = 0;
+  for (let i = 0; i < arr.length; i++) {
+    const v = Math.abs(Number(arr[i]) || 0);
+    out[i] = v;
+    if (v > max) max = v;
+  }
+  if (max > 0) for (let i = 0; i < out.length; i++) out[i] /= max;
+  return out;
 }
 
-/** 시간축 기반 진폭: 줌이 바뀌어도 같은 시각은 같은 높이 (bucket = 0.04s) */
-function amplitudeAt(bucket: number, seed: number) {
-  return mulberry32(seed ^ Math.imul(bucket, 2654435761))();
+/** 오디오 경로별 peak 캐시 (줌/리마운트 시 FFmpeg 재호출 방지, 동시 요청 합치기) */
+const peaksCache = new Map<string, Promise<Float32Array>>();
+
+function loadPeaks(audioPath: string): Promise<Float32Array> {
+  let p = peaksCache.get(audioPath);
+  if (!p) {
+    p = invoke<unknown>('generate_waveform', { audioPath })
+      .then(normalizePeaks)
+      .catch((err) => {
+        peaksCache.delete(audioPath); // 실패는 캐시하지 않음 (재시도 가능)
+        throw err;
+      });
+    peaksCache.set(audioPath, p);
+  }
+  return p;
 }
 
-function hashString(s: string) {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
-  return h >>> 0;
+type PeaksState =
+  | { status: 'idle' | 'loading' | 'error'; peaks: null }
+  | { status: 'ready'; peaks: Float32Array };
+
+function useWaveformPeaks(audioPath: string): PeaksState {
+  const [state, setState] = useState<PeaksState>({ status: 'idle', peaks: null });
+
+  useEffect(() => {
+    if (!audioPath) {
+      setState({ status: 'idle', peaks: null });
+      return;
+    }
+    let cancelled = false; // 경로 변경/언마운트 시 stale 응답 무시
+    setState({ status: 'loading', peaks: null });
+    loadPeaks(audioPath)
+      .then((peaks) => {
+        if (!cancelled) setState({ status: 'ready', peaks });
+      })
+      .catch((err) => {
+        console.error('[WaveformTrack] generate_waveform failed:', err);
+        if (!cancelled) setState({ status: 'error', peaks: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [audioPath]);
+
+  return state;
 }
 
 export const WaveformTrack = memo(function WaveformTrack({ pixelsPerSecond }: { pixelsPerSecond: number }) {
@@ -36,8 +83,11 @@ export const WaveformTrack = memo(function WaveformTrack({ pixelsPerSecond }: { 
 
   const duration = useStoryFrameStore((s) => s.project?.music?.durationSec ?? 180);
   const filePath = useStoryFrameStore((s) => s.project?.music?.filePath ?? '');
+  const projectPath = useStoryFrameStore((s) => s.project?.projectPath ?? '');
   const markers = useStoryFrameStore((s) => s.project?.music?.beatMarkers);
-  const seed = useMemo(() => hashString(filePath || 'default'), [filePath]);
+
+  const audioPath = filePath ? resolveProjectPath(projectPath, filePath) : '';
+  const { status, peaks } = useWaveformPeaks(audioPath);
 
   const cssWidth = Math.min(MAX_CANVAS_WIDTH, Math.ceil(duration * pixelsPerSecond));
 
@@ -65,15 +115,29 @@ export const WaveformTrack = memo(function WaveformTrack({ pixelsPerSecond }: { 
       if (!ctx) return;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
+
+      if (!peaks || peaks.length === 0 || duration <= 0) return;
+
       ctx.fillStyle = '#3b82f6';
+      const n = peaks.length;
+      const mid = h / 2;
+      const maxHalf = (h - 4) / 2;
 
       // 단일 Path로 일괄 fill → draw call 최소화
       ctx.beginPath();
       for (let x = 0; x < w; x += BAR_STEP) {
-        const t = x / pixelsPerSecond;
-        const amp = amplitudeAt(Math.floor(t / 0.04), seed);
-        const bh2 = 10 + amp * (h - 14);
-        ctx.rect(x, (h - bh2) / 2, BAR_STEP - 1, bh2);
+        // 바가 덮는 시간 구간 [t0, t1) → peak 인덱스 구간 (전체 길이 = duration)
+        const t0 = x / pixelsPerSecond;
+        const t1 = (x + BAR_STEP) / pixelsPerSecond;
+        if (t0 >= duration) break;
+        const i0 = Math.min(n - 1, Math.floor((t0 / duration) * n));
+        const i1 = Math.min(n, Math.max(i0 + 1, Math.ceil((Math.min(t1, duration) / duration) * n)));
+
+        let amp = 0;
+        for (let i = i0; i < i1; i++) if (peaks[i] > amp) amp = peaks[i];
+
+        const half = Math.max(1, amp * maxHalf);
+        ctx.rect(x, mid - half, BAR_STEP - 1, half * 2);
       }
       ctx.fill();
     };
@@ -94,11 +158,25 @@ export const WaveformTrack = memo(function WaveformTrack({ pixelsPerSecond }: { 
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = 0;
     };
-  }, [cssWidth, pixelsPerSecond, seed]);
+  }, [cssWidth, pixelsPerSecond, peaks, duration]);
 
   return (
-    <div ref={wrapRef} className="relative h-16 border-b border-slate-800 bg-slate-900/50">
+    <div
+      ref={wrapRef}
+      className="relative h-16 border-b border-slate-800 bg-slate-900/50"
+      aria-busy={status === 'loading'}
+    >
       <canvas ref={canvasRef} className="absolute top-0 left-0 pointer-events-none" aria-hidden="true" />
+      {status === 'loading' && (
+        <div className="absolute inset-0 flex items-center pl-3 text-xs text-slate-500 pointer-events-none">
+          파형 분석 중…
+        </div>
+      )}
+      {status === 'error' && (
+        <div className="absolute inset-0 flex items-center pl-3 text-xs text-red-400/80 pointer-events-none" role="status">
+          파형을 불러오지 못했습니다
+        </div>
+      )}
       {markers?.map((m, i) => (
         <div
           key={i}

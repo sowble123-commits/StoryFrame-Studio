@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStoryFrameStore } from '@/store';
 import { playbackClock } from '@/lib/playbackClock';
 import type { Cut } from '@/types/project';
+import { getAssetUrl } from '@/lib/utils';
 
 interface LayoutEntry {
   cut: Cut;
@@ -34,6 +35,7 @@ const DRIFT_TOLERANCE_SEC = 0.15;
 export function PreviewPlayer() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const cuts = useStoryFrameStore((s) => s.project?.cuts);
+  const projectPath = useStoryFrameStore((s) => s.project?.projectPath);
   const [activeCutId, setActiveCutId] = useState<string | null>(null);
 
   const layout = useMemo<LayoutEntry[]>(() => {
@@ -54,7 +56,10 @@ export function PreviewPlayer() {
     [layout, activeCutId],
   );
   const activeVersion = activeCut?.video.versions?.find((v) => v.isSelected) ?? activeCut?.video.versions?.[0];
-  const videoSource = activeVersion?.filePath;
+  const videoSource = useMemo(
+    () => getAssetUrl(projectPath, activeVersion?.filePath),
+    [projectPath, activeVersion?.filePath],
+  );
 
   /** 마스터 클락 시간 t에 <video>를 맞춘다. DOM 직접 조작. */
   const sync = useCallback((t: number, force = false) => {

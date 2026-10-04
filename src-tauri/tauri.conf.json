@@ -23,7 +23,11 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ipc: tauri: http://localhost:1420 ws://localhost:1420;",
+      "csp": "default-src 'self' asset: http://asset.localhost; img-src 'self' data: asset: http://asset.localhost; media-src 'self' data: asset: http://asset.localhost; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ipc: tauri: http://localhost:1420 ws://localhost:1420;",
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**"]
+      },
       "capabilities": ["main-capability", "remote-dev-access"]
     }
   },

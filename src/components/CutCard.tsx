@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { Image, Video, CheckCircle, Clock, Zap, Gauge, Flame, Copy, Trash2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import * as ContextMenu from '@radix-ui/react-context-menu';
@@ -6,6 +6,7 @@ import { useStoryFrameStore } from '@/store';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Cut } from '@/types/project';
+import { getAssetUrl } from '@/lib/utils';
 
 interface CutCardProps {
   cut: Cut;
@@ -39,6 +40,7 @@ interface VersionSlotsProps {
 
 const VersionSlots = memo(function VersionSlots({ cutId, versions }: VersionSlotsProps) {
   const switchVideoVersion = useStoryFrameStore((s) => s.switchVideoVersion);
+  const projectPath = useStoryFrameStore((s) => s.project?.projectPath);
 
   if (!versions || versions.length === 0) return null;
 
@@ -68,7 +70,7 @@ const VersionSlots = memo(function VersionSlots({ cutId, versions }: VersionSlot
                 : 'border-slate-700 opacity-60 hover:opacity-100',
             )}
           >
-            <img src={v.thumbnailPath} alt={label} className="w-full h-full object-cover" draggable={false} />
+            <img src={getAssetUrl(projectPath, v.thumbnailPath)} alt={label} className="w-full h-full object-cover" draggable={false} />
           </button>
         ) : (
           // 썸네일 없으면 점(dot)
@@ -102,6 +104,11 @@ export const CutCard = memo(function CutCard({ cut, viewMode, isSelected, onClic
   // Selector 세분화: CutCard는 자신의 액션만 구독
   const duplicateCut = useStoryFrameStore((s) => s.duplicateCut);
   const deleteCut    = useStoryFrameStore((s) => s.deleteCut);
+  const projectPath  = useStoryFrameStore((s) => s.project?.projectPath);
+  const thumbUrl = useMemo(
+    () => getAssetUrl(projectPath, cut.illustration.primaryImagePath),
+    [projectPath, cut.illustration.primaryImagePath],
+  );
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cut.id });
 
@@ -150,9 +157,9 @@ export const CutCard = memo(function CutCard({ cut, viewMode, isSelected, onClic
               isGrid ? 'h-32 border-b border-slate-800' : 'w-32 h-20 rounded border border-slate-800',
             )}
           >
-            {cut.illustration.primaryImagePath ? (
+            {thumbUrl ? (
               <img
-                src={cut.illustration.primaryImagePath}
+                src={thumbUrl}
                 alt={`컷 ${cut.index} 썸네일`}
                 className="w-full h-full object-cover"
                 draggable={false}

@@ -27,4 +27,4 @@ export const sfMotion = {
     scale: 0.98,
     transition: { type: 'spring', stiffness: 400, damping: 25 }
   }
-};
+} as const;

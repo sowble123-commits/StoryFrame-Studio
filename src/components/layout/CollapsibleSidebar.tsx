@@ -1,8 +1,8 @@
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useStoryFrameStore } from '@/store';
 import { PanelLeftClose, PanelLeftOpen, Film, Music, Settings, Info, Users, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+
 
 export function CollapsibleSidebar() {
   const project = useStoryFrameStore((state) => state.project);

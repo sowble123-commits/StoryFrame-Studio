@@ -2,7 +2,7 @@ import React, { memo, useCallback, useRef } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useStoryFrameStore } from '@/store';
-import type { Cut } from '@/types/project';
+
 import { clsx } from 'clsx';
 import { GripVertical } from 'lucide-react';
 import { clamp, snapToBeat } from '@/lib/timelineMath';

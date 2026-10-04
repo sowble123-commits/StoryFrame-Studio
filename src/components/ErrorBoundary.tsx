@@ -1,8 +1,9 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { toast } from 'sonner';
 
 interface Props {
   children: ReactNode;
+  onReset?: () => void;
 }
 
 interface State {
