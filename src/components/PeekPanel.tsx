@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Image, Clock, Zap, Gauge, Flame } from 'lucide-react';
 import type { CutStory, CutIllustration } from '@/types/project';
 import { useStoryFrameStore } from '@/store';
-
+import { invoke } from '@tauri-apps/api/core';
+import { getAssetUrl } from '@/lib/utils';
 // ─── 작은 서브 컴포넌트 ────────────────────────────────────────────────────────
 
 /** 레이블 + textarea 조합 필드. 재사용 가능. */
@@ -206,6 +207,53 @@ export function PeekPanel() {
                 <div className="text-xs text-slate-600">
                   {cut.timeline.transitionIn && <span>In: {cut.timeline.transitionIn} </span>}
                   {cut.timeline.transitionOut && <span>Out: {cut.timeline.transitionOut}</span>}
+                </div>
+              )}
+            </div>
+
+            {/* ── 프레임 추출 ── */}
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  const projectPath = useStoryFrameStore.getState().project?.projectPath;
+                  if (!projectPath) return;
+                  
+                  const activeVersion = cut.video.versions?.find(v => v.isSelected) || cut.video.versions?.[0];
+                  if (!activeVersion) return;
+
+                  try {
+                    const outPath = await invoke<string>('extract_last_frame', {
+                      videoPath: activeVersion.filePath,
+                      timestamp: cut.timeline.outPointSec,
+                      projectPath
+                    });
+                    updateCut(cut.id, {
+                      video: { ...cut.video, lastFramePath: outPath }
+                    });
+                  } catch (e) {
+                    console.error(e);
+                  }
+                }}
+                className="w-full px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm rounded-lg transition-colors border border-slate-700 flex items-center justify-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              >
+                <Image size={16} />
+                아웃(Out)점 프레임 추출
+              </button>
+
+              {cut.video.lastFramePath && (
+                <div className="rounded-lg overflow-hidden border border-slate-800 bg-slate-950 shrink-0">
+                  <div className="px-3 py-2 border-b border-slate-800 bg-slate-900 flex justify-between items-center">
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                      Next Cut Ref
+                    </p>
+                  </div>
+                  <img
+                    src={getAssetUrl(useStoryFrameStore.getState().project?.projectPath, cut.video.lastFramePath)}
+                    alt={`컷 ${cut.index} 아웃점 프레임`}
+                    className="w-full object-cover max-h-40"
+                    draggable={false}
+                  />
                 </div>
               )}
             </div>

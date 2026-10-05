@@ -26,6 +26,7 @@ pub fn run() {
             ffmpeg::generate_waveform,
             ffmpeg::assemble_roughcut,
             ffmpeg::import_media,
+            ffmpeg::extract_last_frame,
             export::export_fcpxml,
             export::export_capcut,
             watcher::watch_project,

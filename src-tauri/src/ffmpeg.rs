@@ -296,3 +296,54 @@ pub async fn import_media(
         "thumbnailPath": final_thumb
     }))
 }
+
+#[tauri::command]
+pub async fn extract_last_frame(
+    app: AppHandle,
+    video_path: String,
+    timestamp: f64,
+    project_path: String,
+) -> Result<String, String> {
+    use std::path::Path;
+
+    let proj_path = Path::new(&project_path);
+    let assets_dir = proj_path.join("assets");
+
+    let full_video_path = if Path::new(&video_path).is_absolute() {
+        Path::new(&video_path).to_path_buf()
+    } else {
+        proj_path.join(&video_path)
+    };
+
+    let stem = full_video_path.file_stem().unwrap_or_default().to_string_lossy();
+    let thumb_name = format!("{}_lastframe_{}.jpg", stem, Uuid::new_v4().simple());
+    let dest_thumb_path = assets_dir.join(&thumb_name);
+
+    let timestamp_str = format!("{:.3}", timestamp);
+
+    let out = app
+        .shell()
+        .sidecar("ffmpeg")
+        .map_err(|e| format!("Failed to create sidecar: {}", e))?
+        .args([
+            "-y",
+            "-ss",
+            &timestamp_str,
+            "-i",
+            &full_video_path.to_string_lossy(),
+            "-vframes",
+            "1",
+            "-q:v",
+            "2",
+            &dest_thumb_path.to_string_lossy(),
+        ])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to execute ffmpeg for frame extraction: {}", e))?;
+
+    if !out.status.success() {
+        return Err(String::from_utf8_lossy(&out.stderr).trim().to_string());
+    }
+
+    Ok(format!("assets/{}", thumb_name))
+}
