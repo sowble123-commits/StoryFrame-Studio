@@ -3,7 +3,7 @@ use std::sync::mpsc::{self, RecvTimeoutError, TryRecvError};
 use std::sync::Mutex;
 use std::time::Duration;
 
-use notify_debouncer_full::{new_debouncer, notify::RecursiveMode, DebounceEventResult};
+use notify_debouncer_full::{new_debouncer, notify::{RecursiveMode, Watcher}, DebounceEventResult};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, State};
 

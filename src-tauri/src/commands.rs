@@ -13,7 +13,7 @@ pub struct RecentProject {
 }
 
 fn get_config_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    let mut path = app.path().app_config_dir().map_err(|e| e.to_string())?;
+    let path = app.path().app_config_dir().map_err(|e| e.to_string())?;
     if !path.exists() {
         fs::create_dir_all(&path).map_err(|e| e.to_string())?;
     }

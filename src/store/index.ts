@@ -79,6 +79,13 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
       try {
         const data = await invoke<ProjectState>('open_project', { path });
         set((state) => {
+          if (!data.uiState) {
+            data.uiState = { sidebarCollapsed: false, timelineZoom: 100, selectedCutId: null };
+          } else {
+            data.uiState.sidebarCollapsed = data.uiState.sidebarCollapsed ?? false;
+            data.uiState.timelineZoom = data.uiState.timelineZoom ?? 100;
+            data.uiState.selectedCutId = data.uiState.selectedCutId ?? null;
+          }
           state.project = data;
           state.isLoading = false;
         });
