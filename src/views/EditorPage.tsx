@@ -3,7 +3,7 @@ import { useStoryFrameStore } from '@/store';
 import { useShallow } from 'zustand/react/shallow';
 import { CutCard } from '@/components/CutCard';
 import { PeekPanel } from '@/components/PeekPanel';
-import { LayoutGrid, List } from 'lucide-react';
+import { LayoutGrid, List, Download } from 'lucide-react';
 import { clsx } from 'clsx';
 import { listen } from '@tauri-apps/api/event';
 import { copyFile, mkdir } from '@tauri-apps/plugin-fs';
@@ -103,6 +103,7 @@ const ViewToggle = memo(function ViewToggle({
 // ─── EditorPage ───────────────────────────────────────────────────────────────
 
 import { PreviewPlayer } from '@/components/timeline/PreviewPlayer';
+import { ExportDialog } from '@/components/ExportDialog';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 export function EditorPage() {
@@ -119,6 +120,14 @@ export function EditorPage() {
 
   // 드래그 중인 컷 (고스트 렌더용)
   const [activeCut, setActiveCut] = useState<Cut | null>(null);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+
+  const clips = useStoryFrameStore(useShallow((s) => {
+    return s.project?.cuts?.map(c => {
+      const activeVersion = c.video.versions?.find(v => v.isSelected) || c.video.versions?.[0];
+      return activeVersion?.filePath ? `${s.project?.projectPath}/assets/${activeVersion.filePath}` : undefined;
+    }).filter(Boolean) as string[] ?? [];
+  }));
 
   // ── 파일 드롭 리스너 (메모리 릭 방지) ──────────────────────────────────────
   // projectPath가 바뀔 때만 재등록하되, Promise를 ref에 보관해 cleanup에서 확실히 해제
@@ -210,7 +219,17 @@ export function EditorPage() {
           <h2 className="text-lg font-bold text-slate-200 leading-tight">{title}</h2>
           <p className="text-xs text-slate-500 mt-0.5">{cutCount} Cuts</p>
         </div>
-        <ViewToggle viewMode={viewMode} onSet={setViewMode} disabled={cutIds.length === 0} />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsExportOpen(true)}
+            disabled={cutIds.length === 0}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download size={16} />
+            <span>내보내기</span>
+          </button>
+          <ViewToggle viewMode={viewMode} onSet={setViewMode} disabled={cutIds.length === 0} />
+        </div>
       </header>
 
       {/* ── 컷 그리드 & 프리뷰 ── */}
@@ -281,6 +300,13 @@ export function EditorPage() {
 
       {/* ── PeekPanel ── */}
       <PeekPanel />
+
+      {/* ── 내보내기 모달 ── */}
+      <ExportDialog 
+        isOpen={isExportOpen} 
+        onClose={() => setIsExportOpen(false)} 
+        clips={clips} 
+      />
     </div>
   );
 }

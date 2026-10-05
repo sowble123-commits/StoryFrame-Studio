@@ -24,11 +24,11 @@ UI 껍데기만 만들어져 있고 상태(State) 및 화면 전환(Routing)이 
     2. `MainContent.tsx` 또는 `EditorPage.tsx` 내부를 조건부 렌더링으로 분기 처리.
     3. 비어있는 `AudioPage.tsx`, `SettingsPage.tsx` 스캐폴딩 생성.
 
-* [ ] **컷 0개일 때의 뷰 모드(Grid/List) Empty State 버그**
+* [x] **컷 0개일 때의 뷰 모드(Grid/List) Empty State 버그**
   - **증상:** 프로젝트에 컷이 없을 때 우측 상단의 Grid/List 버튼을 누르면 시각적 변화가 없어서 고장 난 것처럼 보임.
   - **해결 목표:** 컷이 0개일 때는 해당 ViewToggle 버튼을 비활성화(`disabled`) 하거나, Empty State UI 영역 자체를 뷰 모드에 따라 다르게 렌더링하도록 수정.
 
-* [ ] **Export (내보내기) 모달 진입점 누락 및 연결**
+* [x] **Export (내보내기) 모달 진입점 누락 및 연결**
   - **증상:** `ExportDialog.tsx` 컴포넌트 파일은 존재하지만, 앱 내 어디에서도 임포트하거나 호출하는 버튼이 없음 (기획 P4-09 누락).
   - **해결 목표:** `TitleBar.tsx` 또는 `EditorPage.tsx` 헤더 영역에 내보내기 버튼을 추가하고, 클릭 시 모달 상태를 변경하여 렌더링하도록 연결.
 
