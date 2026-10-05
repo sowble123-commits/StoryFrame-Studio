@@ -22,6 +22,7 @@ pub fn run() {
             commands::open_project,
             commands::save_project_state,
             commands::list_recent_projects,
+            commands::delete_project,
             ffmpeg::generate_waveform,
             ffmpeg::assemble_roughcut,
             export::export_fcpxml,

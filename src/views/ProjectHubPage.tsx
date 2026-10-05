@@ -4,6 +4,7 @@ import { ProjectCard } from '@/components/ProjectCard';
 import { FolderOpen, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { sfMotion } from '@/lib/motion';
+import { invoke } from '@tauri-apps/api/core';
 
 export function ProjectHubPage() {
   const { loadProject, createProject, recentProjects, loadRecentProjects, isLoading } = useStoryFrameStore();
@@ -19,6 +20,18 @@ export function ProjectHubPage() {
     await createProject(newProjectName.trim());
     setIsCreating(false);
     setNewProjectName('');
+  };
+
+  const handleDelete = async (path: string, name: string) => {
+    if (window.confirm(`'${name}' 프로젝트를 영구적으로 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+      try {
+        await invoke('delete_project', { path });
+        await loadRecentProjects();
+      } catch (err) {
+        console.error('Failed to delete project:', err);
+        alert('프로젝트 삭제에 실패했습니다: ' + err);
+      }
+    }
   };
 
   return (
@@ -103,6 +116,7 @@ export function ProjectHubPage() {
                   path={p.path} 
                   lastOpened={p.last_opened} 
                   onClick={() => loadProject(p.path)} 
+                  onDelete={() => handleDelete(p.path, p.name)}
                 />
               ))}
             </div>

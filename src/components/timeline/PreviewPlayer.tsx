@@ -132,7 +132,7 @@ export function PreviewPlayer() {
   return (
     <div className="flex flex-col h-full bg-slate-950 rounded-lg overflow-hidden border border-slate-800 shadow-xl relative">
       <div className="absolute top-3 left-3 z-10 px-2 py-1 bg-black/60 rounded text-xs font-mono text-slate-300 backdrop-blur">
-        Preview Player
+        미리보기 플레이어
       </div>
       <div className="flex-1 bg-black relative flex items-center justify-center">
         {videoSource ? (
@@ -149,7 +149,7 @@ export function PreviewPlayer() {
             }}
           />
         ) : (
-          <div className="text-slate-600 text-sm">No video source</div>
+          <div className="text-slate-600 text-sm">비디오 소스 없음</div>
         )}
       </div>
     </div>

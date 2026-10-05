@@ -150,3 +150,28 @@ pub fn list_recent_projects(app: AppHandle) -> Result<Vec<RecentProject>, String
     let recents: Vec<RecentProject> = serde_json::from_str(&content).unwrap_or_else(|_| vec![]);
     Ok(recents)
 }
+
+#[tauri::command]
+pub fn delete_project(app: AppHandle, path: String) -> Result<(), String> {
+    let project_dir = PathBuf::from(&path);
+    if project_dir.exists() {
+        fs::remove_dir_all(&project_dir).map_err(|e| e.to_string())?;
+    }
+    
+    // Remove from recent_projects.json
+    let config_dir = get_config_dir(&app)?;
+    let recent_path = config_dir.join("recent_projects.json");
+    if recent_path.exists() {
+        if let Ok(content) = fs::read_to_string(&recent_path) {
+            if let Ok(mut recents) = serde_json::from_str::<Vec<RecentProject>>(&content) {
+                recents.retain(|p| p.path != path);
+                if let Ok(json) = serde_json::to_string_pretty(&recents) {
+                    let _ = fs::write(recent_path, json);
+                }
+            }
+        }
+    }
+    
+    Ok(())
+}
+

@@ -1,10 +1,13 @@
-import { Maximize, Minus, X } from 'lucide-react';
+import { Maximize, Minus, X, Home } from 'lucide-react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { useStoryFrameStore } from '@/store';
 
 export function TitleBar() {
   const minimize = () => getCurrentWindow().minimize();
   const maximize = () => getCurrentWindow().toggleMaximize();
   const close = () => getCurrentWindow().close();
+  const project = useStoryFrameStore((state) => state.project);
+  const closeProject = useStoryFrameStore((state) => state.closeProject);
 
   return (
     <div
@@ -15,6 +18,16 @@ export function TitleBar() {
         <span>StoryFrame Studio</span>
       </div>
       <div className="flex items-center space-x-1">
+        {project && (
+          <button
+            onClick={closeProject}
+            className="p-1.5 mr-2 flex items-center gap-1.5 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition-colors text-xs font-medium"
+            title="프로젝트 닫기 (홈으로)"
+          >
+            <Home size={14} />
+            홈으로
+          </button>
+        )}
         <button
           onClick={minimize}
           className="p-2 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition-colors"

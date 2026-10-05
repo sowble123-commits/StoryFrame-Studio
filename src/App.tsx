@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
+import { TitleBar } from '@/components/layout/TitleBar';
 import { useStoryFrameStore } from '@/store';
 import { ProjectHubPage } from '@/views/ProjectHubPage';
 import { EditorPage } from '@/views/EditorPage';
@@ -16,21 +17,24 @@ function App() {
 
   return (
     <>
-      <ErrorBoundary key={resetKey} onReset={handleReset}>
-        <AppShell>
-          <AnimatePresence mode="wait">
-            {hasProject ? (
-              <motion.div key="editor" {...sfMotion.fade} className="w-full h-full flex flex-col overflow-hidden">
-                <EditorPage />
-              </motion.div>
-            ) : (
-              <motion.div key="hub" {...sfMotion.fade} className="w-full h-full flex flex-col overflow-hidden">
-                <ProjectHubPage />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </AppShell>
-      </ErrorBoundary>
+      <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-950 text-slate-200">
+        <TitleBar />
+        <ErrorBoundary key={resetKey} onReset={handleReset}>
+          <AppShell>
+            <AnimatePresence mode="wait">
+              {hasProject ? (
+                <motion.div key="editor" {...sfMotion.fade} className="w-full h-full flex flex-col overflow-hidden">
+                  <EditorPage />
+                </motion.div>
+              ) : (
+                <motion.div key="hub" {...sfMotion.fade} className="w-full h-full flex flex-col overflow-hidden">
+                  <ProjectHubPage />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </AppShell>
+        </ErrorBoundary>
+      </div>
 
       {/* 경계 밖에 배치: 렌더 크래시 중에도 토스트(에러 안내) 유지 */}
       <Toaster

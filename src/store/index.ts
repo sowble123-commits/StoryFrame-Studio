@@ -20,10 +20,12 @@ interface StoryFrameStore {
   setViewMode: (mode: 'grid' | 'list') => void;
   setProject: (project: ProjectState | null) => void;
   loadProject: (path?: string) => Promise<void>;
+  closeProject: () => void;
   saveProject: (path: string) => Promise<void>;
   createProject: (name: string) => Promise<void>;
   loadRecentProjects: () => Promise<void>;
   toggleSidebar: () => void;
+  toggleTimeline: () => void;
   setSelectedCutId: (id: string | null) => void;
   moveCut: (oldIndex: number, newIndex: number) => void;
   deleteCut: (id: string) => void;
@@ -79,12 +81,30 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
       try {
         const data = await invoke<ProjectState>('open_project', { path });
         set((state) => {
+          // Fallbacks for legacy/incomplete project.json
+          if (!data.meta) {
+            data.meta = { id: '', title: 'Untitled', genre: '', createdAt: '', updatedAt: '', synopsis: '', targetDurationSec: 0, thumbnailPath: '' };
+          }
+          if (!data.globalAssets) {
+            data.globalAssets = { characterSheets: [], moodboards: [] };
+          }
+          if (!data.music) {
+            data.music = { filePath: '', durationSec: 0, bpm: 120, waveformCachePath: '', beatMarkers: [], sections: [] };
+          }
+          if (!data.progress) {
+            data.progress = { phase: '', totalCuts: 0, completedCuts: 0, pendingTasks: [] };
+          }
+          if (!data.cuts) data.cuts = [];
+          if (!data.roughCut) data.roughCut = { lastAssembledAt: '', outputPath: '', totalDurationSec: 0, cutOrder: [] };
+
           if (!data.uiState) {
-            data.uiState = { sidebarCollapsed: false, timelineZoom: 100, selectedCutId: null };
+            data.uiState = { sidebarCollapsed: false, timelineZoom: 100, selectedCutId: null, gridColumns: 3, timelineVisible: false } as any;
           } else {
             data.uiState.sidebarCollapsed = data.uiState.sidebarCollapsed ?? false;
             data.uiState.timelineZoom = data.uiState.timelineZoom ?? 100;
             data.uiState.selectedCutId = data.uiState.selectedCutId ?? null;
+            data.uiState.gridColumns = data.uiState.gridColumns ?? 3;
+            (data.uiState as any).timelineVisible = (data.uiState as any).timelineVisible ?? false;
           }
           state.project = data;
           state.isLoading = false;
@@ -121,6 +141,22 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
         });
         
         set((state) => {
+          if (!data.meta) data.meta = { id: '', title: name, genre: '', createdAt: '', updatedAt: '', synopsis: '', targetDurationSec: 0, thumbnailPath: '' };
+          if (!data.globalAssets) data.globalAssets = { characterSheets: [], moodboards: [] };
+          if (!data.music) data.music = { filePath: '', durationSec: 0, bpm: 120, waveformCachePath: '', beatMarkers: [], sections: [] };
+          if (!data.progress) data.progress = { phase: '', totalCuts: 0, completedCuts: 0, pendingTasks: [] };
+          if (!data.cuts) data.cuts = [];
+          if (!data.roughCut) data.roughCut = { lastAssembledAt: '', outputPath: '', totalDurationSec: 0, cutOrder: [] };
+          if (!data.uiState) {
+            data.uiState = { sidebarCollapsed: false, timelineZoom: 100, selectedCutId: null, gridColumns: 3, timelineVisible: false } as any;
+          } else {
+            data.uiState.sidebarCollapsed = data.uiState.sidebarCollapsed ?? false;
+            data.uiState.timelineZoom = data.uiState.timelineZoom ?? 100;
+            data.uiState.selectedCutId = data.uiState.selectedCutId ?? null;
+            data.uiState.gridColumns = data.uiState.gridColumns ?? 3;
+            (data.uiState as any).timelineVisible = (data.uiState as any).timelineVisible ?? false;
+          }
+
           state.project = data;
           state.isLoading = false;
         });
@@ -134,6 +170,12 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
           state.isLoading = false;
         });
       }
+    },
+    closeProject: () => {
+      set((state) => {
+        state.project = null;
+        state.error = null;
+      });
     },
     mergeProject: async (path) => {
       try {
@@ -171,6 +213,13 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
       set((state) => {
         if (state.project) {
           state.project.uiState.sidebarCollapsed = !state.project.uiState.sidebarCollapsed;
+        }
+      });
+    },
+    toggleTimeline: () => {
+      set((state) => {
+        if (state.project) {
+          (state.project.uiState as any).timelineVisible = !(state.project.uiState as any).timelineVisible;
         }
       });
     },

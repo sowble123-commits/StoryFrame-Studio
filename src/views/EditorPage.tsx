@@ -105,7 +105,7 @@ export function EditorPage() {
   useKeyboardShortcuts();
 
   // Selector 세분화 — 각각 최소 slice만 구독하여 무관한 변경 시 리렌더 방지
-  const title      = useStoryFrameStore((s) => s.project?.meta.title ?? 'Untitled Project');
+  const title      = useStoryFrameStore((s) => s.project?.meta.title ?? '제목 없는 프로젝트');
   const cutCount   = useStoryFrameStore((s) => s.project?.cuts?.length ?? 0);
   const cutIds     = useStoryFrameStore(useShallow((s) => s.project?.cuts?.map((c) => c.id) ?? []));
   const projectPath = useStoryFrameStore((s) => s.project?.projectPath);
@@ -217,8 +217,8 @@ export function EditorPage() {
               <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-slate-700 flex items-center justify-center">
                 <LayoutGrid size={24} className="text-slate-700" />
               </div>
-              <p className="text-sm">No cuts in this project.</p>
-              <p className="text-xs text-slate-700">Drag &amp; drop media files to import</p>
+              <p className="text-sm">프로젝트에 컷이 없습니다.</p>
+              <p className="text-xs text-slate-700">미디어 파일을 드래그 앤 드롭하여 가져오세요</p>
             </div>
           ) : (
             <DndContext

@@ -17,7 +17,7 @@ export function CollapsibleSidebar() {
       className="h-full bg-slate-900 border-r border-slate-800 flex flex-col overflow-hidden shrink-0 z-10"
     >
       <div className="p-2 flex justify-between items-center border-b border-slate-800 h-12 shrink-0">
-        {!isCollapsed && <span className="font-semibold text-slate-200 px-2 whitespace-nowrap">Project Info</span>}
+        {!isCollapsed && <span className="font-semibold text-slate-200 px-2 whitespace-nowrap">프로젝트 정보</span>}
         <button
           onClick={toggleSidebar}
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -31,8 +31,8 @@ export function CollapsibleSidebar() {
       </div>
 
       <div className="flex-1 flex flex-col py-4 gap-2 px-2 overflow-y-auto overflow-x-hidden custom-scrollbar">
-        <SidebarItem icon={<Film size={20} />} label="Cuts" isCollapsed={isCollapsed} />
-        <SidebarItem icon={<Music size={20} />} label="Audio" isCollapsed={isCollapsed} />
+        <SidebarItem icon={<Film size={20} />} label="컷 관리" isCollapsed={isCollapsed} />
+        <SidebarItem icon={<Music size={20} />} label="오디오" isCollapsed={isCollapsed} />
         
         {project && !isCollapsed && (
           <motion.div 
@@ -42,11 +42,11 @@ export function CollapsibleSidebar() {
             className="flex flex-col gap-4 mt-6 px-2"
           >
             {/* Synopsis */}
-            {project.meta.synopsis && (
+            {project?.meta?.synopsis && (
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2 text-slate-300 font-medium text-sm">
                   <Info size={16} />
-                  <h3>Synopsis</h3>
+                  <h3>시놉시스</h3>
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">
                   {project.meta.synopsis}
@@ -55,11 +55,11 @@ export function CollapsibleSidebar() {
             )}
 
             {/* Character DNA */}
-            {project.globalAssets.characterSheets.length > 0 && (
+            {project?.globalAssets?.characterSheets && project.globalAssets.characterSheets.length > 0 && (
               <div className="flex flex-col gap-2 mt-2">
                 <div className="flex items-center gap-2 text-slate-300 font-medium text-sm">
                   <Users size={16} />
-                  <h3>Character DNA</h3>
+                  <h3>캐릭터 속성 (DNA)</h3>
                 </div>
                 <div className="flex flex-col gap-2">
                   {project.globalAssets.characterSheets.map((char) => (
@@ -73,11 +73,11 @@ export function CollapsibleSidebar() {
             )}
 
             {/* Moodboard */}
-            {project.globalAssets.moodboards.length > 0 && (
+            {project?.globalAssets?.moodboards && project.globalAssets.moodboards.length > 0 && (
               <div className="flex flex-col gap-2 mt-2">
                 <div className="flex items-center gap-2 text-slate-300 font-medium text-sm">
                   <ImageIcon size={16} />
-                  <h3>Moodboard</h3>
+                  <h3>무드보드</h3>
                 </div>
                 <div className="flex flex-col gap-4">
                   {project.globalAssets.moodboards.map((board) => (
@@ -104,7 +104,7 @@ export function CollapsibleSidebar() {
         )}
 
         <div className="flex-1" />
-        <SidebarItem icon={<Settings size={20} />} label="Settings" isCollapsed={isCollapsed} />
+        <SidebarItem icon={<Settings size={20} />} label="설정" isCollapsed={isCollapsed} />
       </div>
     </motion.div>
   );
