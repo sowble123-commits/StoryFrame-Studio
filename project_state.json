@@ -22,7 +22,8 @@
       { "cutId": "system", "task": "phase5", "note": "P5-01 (useExternalSync debouncing), P5-05 (Zustand shallow render optimization), P5-06 (Global ErrorBoundary & Toast notification), P5-07 (Windows MSI packaging) 완료" },
       { "cutId": "system", "task": "phase5_ui", "note": "P5-02 (Sidebar metadata rendering), P5-03 (sfMotion Framer Motion animations), P5-04 (A11y focus rings, ARIA labels, tab flow) 완료" },
       { "cutId": "system", "task": "phase3_ffmpeg", "note": "P4-01 (FFmpeg 무손실 병합, in/out trim 적용) 백엔드 및 UI 연동 완료" },
-      { "cutId": "system", "task": "phase4_extract", "note": "P4-02 (마지막 프레임 추출) 기능 및 UI(PeekPanel) 연동 완료" }
+      { "cutId": "system", "task": "phase4_extract", "note": "P4-02 (마지막 프레임 추출) 기능 및 UI(PeekPanel) 연동 완료" },
+      { "cutId": "system", "task": "phase4_progress", "note": "P4-03 (StatusBar 렌더링 진행률 이벤트 연동) 완료" }
     ]
   },
   "music": {

@@ -1,12 +1,34 @@
 import { useStoryFrameStore } from '@/store';
 import { useShallow } from 'zustand/react/shallow';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { listen } from '@tauri-apps/api/event';
 
 export function StatusBar() {
   const title = useStoryFrameStore((state) => state.project?.meta.title);
   const progress = useStoryFrameStore(useShallow((state) => state.project?.progress));
   const timelineVisible = useStoryFrameStore((state) => (state.project?.uiState as any)?.timelineVisible);
   const toggleTimeline = useStoryFrameStore((state) => state.toggleTimeline);
+  
+  const [renderProgress, setRenderProgress] = useState<number | null>(null);
+
+  useEffect(() => {
+    let unlistenFn: () => void;
+    
+    listen<number>('render-progress', (e) => {
+      if (e.payload >= 100) {
+        setRenderProgress(null);
+      } else {
+        setRenderProgress(e.payload);
+      }
+    }).then(unlisten => {
+      unlistenFn = unlisten;
+    }).catch(console.error);
+
+    return () => {
+      if (unlistenFn) unlistenFn();
+    };
+  }, []);
   
   return (
     <div className="h-8 bg-slate-900 border-t border-slate-800 flex items-center justify-between px-4 shrink-0 text-xs text-slate-400 select-none">
@@ -16,6 +38,12 @@ export function StatusBar() {
           <span>
             {progress.completedCuts ?? 0} / {progress.totalCuts ?? 0} 컷 완료
           </span>
+        )}
+        {renderProgress !== null && (
+          <div className="flex items-center gap-2 text-blue-400 font-medium">
+            <Loader2 size={12} className="animate-spin" />
+            <span>렌더링 중: {renderProgress.toFixed(1)}%</span>
+          </div>
         )}
       </div>
       <div className="flex items-center gap-4">
