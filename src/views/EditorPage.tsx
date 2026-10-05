@@ -64,9 +64,11 @@ const GhostCard = memo(function GhostCard({ cut }: { cut: Cut }) {
 const ViewToggle = memo(function ViewToggle({
   viewMode,
   onSet,
+  disabled,
 }: {
   viewMode: 'grid' | 'list';
   onSet: (m: 'grid' | 'list') => void;
+  disabled?: boolean;
 }) {
   return (
     <div
@@ -79,6 +81,7 @@ const ViewToggle = memo(function ViewToggle({
           key={mode}
           type="button"
           onClick={() => onSet(mode)}
+          disabled={disabled}
           aria-pressed={viewMode === mode}
           aria-label={mode === 'grid' ? '그리드 보기' : '리스트 보기'}
           title={mode === 'grid' ? 'Grid View' : 'List View'}
@@ -87,6 +90,7 @@ const ViewToggle = memo(function ViewToggle({
             viewMode === mode
               ? 'bg-slate-700 text-slate-200'
               : 'text-slate-500 hover:text-slate-300',
+            disabled && 'opacity-50 cursor-not-allowed'
           )}
         >
           {mode === 'grid' ? <LayoutGrid size={17} /> : <List size={17} />}
@@ -206,7 +210,7 @@ export function EditorPage() {
           <h2 className="text-lg font-bold text-slate-200 leading-tight">{title}</h2>
           <p className="text-xs text-slate-500 mt-0.5">{cutCount} Cuts</p>
         </div>
-        <ViewToggle viewMode={viewMode} onSet={setViewMode} />
+        <ViewToggle viewMode={viewMode} onSet={setViewMode} disabled={cutIds.length === 0} />
       </header>
 
       {/* ── 컷 그리드 & 프리뷰 ── */}
