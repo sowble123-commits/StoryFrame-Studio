@@ -103,10 +103,19 @@ pub async fn generate_waveform(
     }))
 }
 
+#[derive(serde::Deserialize)]
+pub struct ClipConfig {
+    pub path: String,
+    #[serde(rename = "inPoint")]
+    pub in_point: Option<f64>,
+    #[serde(rename = "outPoint")]
+    pub out_point: Option<f64>,
+}
+
 #[tauri::command]
 pub async fn assemble_roughcut(
     app: AppHandle,
-    clips: Vec<String>,
+    clips: Vec<ClipConfig>,
     output_path: String,
     total_duration: Option<f64>, // 프론트: totalDuration (생략 시 ffprobe 합산)
 ) -> Result<String, String> {
@@ -122,7 +131,10 @@ pub async fn assemble_roughcut(
         _ => {
             let mut sum = 0.0;
             for c in &clips {
-                sum += probe_duration(&app, c).await.unwrap_or(0.0);
+                let dur = probe_duration(&app, &c.path).await.unwrap_or(0.0);
+                let in_pt = c.in_point.unwrap_or(0.0);
+                let out_pt = c.out_point.unwrap_or(dur);
+                sum += (out_pt - in_pt).max(0.0);
             }
             sum
         }
@@ -134,9 +146,18 @@ pub async fn assemble_roughcut(
         let mut f = std::fs::File::create(&list_path)
             .map_err(|e| format!("Failed to create list file: {}", e))?;
         for clip in &clips {
-            let escaped = clip.replace('\'', "'\\''");
+            let escaped = clip.path.replace('\'', "'\\''");
             writeln!(f, "file '{}'", escaped)
                 .map_err(|e| format!("Failed to write list file: {}", e))?;
+            
+            if let Some(in_pt) = clip.in_point {
+                writeln!(f, "inpoint {:.3}", in_pt)
+                    .map_err(|e| format!("Failed to write inpoint: {}", e))?;
+            }
+            if let Some(out_pt) = clip.out_point {
+                writeln!(f, "outpoint {:.3}", out_pt)
+                    .map_err(|e| format!("Failed to write outpoint: {}", e))?;
+            }
         }
     }
 

@@ -9,7 +9,7 @@ import { sfMotion } from '@/lib/motion';
 interface ExportDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  clips: string[]; // clip paths
+  clips: { path: string; inPoint: number; outPoint: number }[];
   totalDuration?: number; // 선택: 알면 전달 (생략 시 백엔드가 ffprobe로 계산)
 }
 

@@ -126,8 +126,13 @@ export function EditorPage() {
   const clips = useStoryFrameStore(useShallow((s) => {
     return s.project?.cuts?.map(c => {
       const activeVersion = c.video.versions?.find(v => v.isSelected) || c.video.versions?.[0];
-      return activeVersion?.filePath ? `${s.project?.projectPath}/assets/${activeVersion.filePath}` : undefined;
-    }).filter(Boolean) as string[] ?? [];
+      if (!activeVersion?.filePath) return undefined;
+      return {
+        path: `${s.project?.projectPath}/assets/${activeVersion.filePath}`,
+        inPoint: c.timeline.inPointSec,
+        outPoint: c.timeline.outPointSec
+      };
+    }).filter(Boolean) as { path: string, inPoint: number, outPoint: number }[] ?? [];
   }));
 
   // ── 파일 드롭 리스너 (메모리 릭 방지) ──────────────────────────────────────

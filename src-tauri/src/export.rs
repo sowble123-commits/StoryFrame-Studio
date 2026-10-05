@@ -51,12 +51,16 @@ fn clip_name(path: &str, idx: usize) -> String {
         .unwrap_or_else(|| format!("clip_{}", idx))
 }
 
-async fn probe_all(app: &AppHandle, clips: &[String]) -> Result<Vec<f64>, String> {
+async fn probe_all(app: &AppHandle, clips: &[crate::ffmpeg::ClipConfig]) -> Result<Vec<f64>, String> {
     let mut v = Vec::with_capacity(clips.len());
     for c in clips {
-        let d = probe_duration(app, c)
+        let mut d = probe_duration(app, &c.path)
             .await
-            .map_err(|e| format!("'{}' 길이 확인 실패: {}", c, e))?;
+            .map_err(|e| format!("'{}' 길이 확인 실패: {}", c.path, e))?;
+        
+        let in_pt = c.in_point.unwrap_or(0.0);
+        let out_pt = c.out_point.unwrap_or(d);
+        d = (out_pt - in_pt).max(0.0);
         v.push(d);
     }
     Ok(v)
@@ -65,7 +69,7 @@ async fn probe_all(app: &AppHandle, clips: &[String]) -> Result<Vec<f64>, String
 #[tauri::command]
 pub async fn export_fcpxml(
     app: AppHandle,
-    clips: Vec<String>,
+    clips: Vec<crate::ffmpeg::ClipConfig>,
     output_path: String,
 ) -> Result<(), String> {
     if clips.is_empty() {
@@ -82,17 +86,18 @@ pub async fn export_fcpxml(
 
     for (i, (clip, dur)) in clips.iter().zip(&durations).enumerate() {
         let id = format!("r{}", i + 2);
-        let name = xml_escape(&clip_name(clip, i));
+        let name = xml_escape(&clip_name(&clip.path, i));
         let dur_r = to_rational(*dur);
+        let start_r = to_rational(clip.in_point.unwrap_or(0.0));
 
         resources.push(format!(
             r#"        <asset id="{id}" name="{name}" start="0s" duration="{dur_r}" hasVideo="1" hasAudio="1" format="r1">
             <media-rep kind="original-media" src="{src}"/>
         </asset>"#,
-            src = xml_escape(&path_to_file_url(clip)),
+            src = xml_escape(&path_to_file_url(&clip.path)),
         ));
         spine.push(format!(
-            r#"                    <asset-clip ref="{id}" name="{name}" offset="{off}" start="0s" duration="{dur_r}" format="r1"/>"#,
+            r#"                    <asset-clip ref="{id}" name="{name}" offset="{off}" start="{start_r}" duration="{dur_r}" format="r1"/>"#,
             off = to_rational(offset),
         ));
         offset += *dur; // 누적 offset
@@ -129,7 +134,7 @@ pub async fn export_fcpxml(
 #[tauri::command]
 pub async fn export_capcut(
     app: AppHandle,
-    clips: Vec<String>,
+    clips: Vec<crate::ffmpeg::ClipConfig>,
     output_path: String,
 ) -> Result<(), String> {
     if clips.is_empty() {
@@ -145,18 +150,19 @@ pub async fn export_capcut(
     for (clip, dur) in clips.iter().zip(&durations) {
         let material_id = Uuid::new_v4().to_string().to_uppercase();
         let dur_us = to_us(*dur);
+        let start_us = to_us(clip.in_point.unwrap_or(0.0));
 
         materials.push(json!({
             "id": material_id,
             "type": "video",
-            "path": clip,
-            "material_name": clip_name(clip, materials.len()),
+            "path": clip.path,
+            "material_name": clip_name(&clip.path, materials.len()),
             "duration": dur_us
         }));
         segments.push(json!({
             "id": Uuid::new_v4().to_string().to_uppercase(),
             "material_id": material_id,
-            "source_timerange": { "start": 0, "duration": dur_us },  // In/Out (원본 구간)
+            "source_timerange": { "start": start_us, "duration": dur_us },  // In/Out (원본 구간)
             "target_timerange": { "start": cursor_us, "duration": dur_us }, // 타임라인 배치
             "speed": 1.0,
             "volume": 1.0,
