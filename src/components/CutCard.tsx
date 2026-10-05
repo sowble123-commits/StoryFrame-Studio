@@ -244,7 +244,7 @@ export const CutCard = memo(function CutCard({ cut, viewMode, isSelected, onClic
             "
           >
             <Copy size={13} />
-            Duplicate
+            복제
           </ContextMenu.Item>
 
           <ContextMenu.Separator className="h-px bg-slate-700 my-1" />
@@ -258,7 +258,7 @@ export const CutCard = memo(function CutCard({ cut, viewMode, isSelected, onClic
             "
           >
             <Trash2 size={13} />
-            Delete
+            삭제
           </ContextMenu.Item>
         </ContextMenu.Content>
       </ContextMenu.Portal>

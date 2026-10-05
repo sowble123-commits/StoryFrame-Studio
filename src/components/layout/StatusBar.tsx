@@ -1,4 +1,5 @@
 import { useStoryFrameStore } from '@/store';
+import { ChevronDown } from 'lucide-react';
 
 export function StatusBar() {
   const project = useStoryFrameStore((state) => state.project);
@@ -17,9 +18,14 @@ export function StatusBar() {
         {project && (
           <button
             onClick={() => useStoryFrameStore.getState().toggleTimeline()}
-            className="hover:text-slate-200 transition-colors focus:outline-none flex items-center gap-1"
+            className="hover:text-slate-200 hover:bg-slate-800 p-1 rounded transition-colors focus:outline-none flex items-center justify-center text-slate-400"
+            title="타임라인 토글"
+            aria-label="타임라인 토글"
           >
-            {(project.uiState as any)?.timelineVisible ? '타임라인 숨기기 ⬇' : '타임라인 열기 ⬆'}
+            <ChevronDown 
+              size={18} 
+              className={`transition-transform duration-200 ${(project.uiState as any)?.timelineVisible ? '' : 'rotate-180'}`}
+            />
           </button>
         )}
         <span>준비됨</span>
