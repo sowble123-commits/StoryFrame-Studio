@@ -1,12 +1,17 @@
 import { motion } from 'framer-motion';
 import { useStoryFrameStore } from '@/store';
+import { useShallow } from 'zustand/react/shallow';
 import { PanelLeftClose, PanelLeftOpen, Film, Music, Settings, Info, Users, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 
 export function CollapsibleSidebar() {
-  const project = useStoryFrameStore((state) => state.project);
-  const isCollapsed = project?.uiState.sidebarCollapsed ?? false;
+  const isCollapsed = useStoryFrameStore((state) => state.project?.uiState.sidebarCollapsed ?? false);
+  const synopsis = useStoryFrameStore((state) => state.project?.meta?.synopsis);
+  const characterSheets = useStoryFrameStore(useShallow((state) => state.project?.globalAssets?.characterSheets));
+  const moodboards = useStoryFrameStore(useShallow((state) => state.project?.globalAssets?.moodboards));
+  const hasProject = useStoryFrameStore((state) => !!state.project);
+
   const toggleSidebar = useStoryFrameStore((state) => state.toggleSidebar);
   const currentTab = useStoryFrameStore((state) => state.currentTab);
   const setCurrentTab = useStoryFrameStore((state) => state.setCurrentTab);
@@ -36,7 +41,7 @@ export function CollapsibleSidebar() {
         <SidebarItem icon={<Film size={20} />} label="컷 관리" isCollapsed={isCollapsed} isActive={currentTab === 'cuts'} onClick={() => setCurrentTab('cuts')} />
         <SidebarItem icon={<Music size={20} />} label="오디오" isCollapsed={isCollapsed} isActive={currentTab === 'audio'} onClick={() => setCurrentTab('audio')} />
         
-        {project && !isCollapsed && (
+        {hasProject && !isCollapsed && (
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -44,27 +49,27 @@ export function CollapsibleSidebar() {
             className="flex flex-col gap-4 mt-6 px-2"
           >
             {/* Synopsis */}
-            {project?.meta?.synopsis && (
+            {synopsis && (
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2 text-slate-300 font-medium text-sm">
                   <Info size={16} />
                   <h3>시놉시스</h3>
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">
-                  {project.meta.synopsis}
+                  {synopsis}
                 </p>
               </div>
             )}
 
             {/* Character DNA */}
-            {project?.globalAssets?.characterSheets && project.globalAssets.characterSheets.length > 0 && (
+            {characterSheets && characterSheets.length > 0 && (
               <div className="flex flex-col gap-2 mt-2">
                 <div className="flex items-center gap-2 text-slate-300 font-medium text-sm">
                   <Users size={16} />
                   <h3>캐릭터 속성 (DNA)</h3>
                 </div>
                 <div className="flex flex-col gap-2">
-                  {project.globalAssets.characterSheets.map((char) => (
+                  {characterSheets.map((char) => (
                     <div key={char.id} className="bg-slate-800/50 rounded-md p-2 flex flex-col gap-1">
                       <span className="text-sm text-slate-200 font-medium">{char.name}</span>
                       <span className="text-xs text-slate-400">{char.styleNotes}</span>
@@ -75,14 +80,14 @@ export function CollapsibleSidebar() {
             )}
 
             {/* Moodboard */}
-            {project?.globalAssets?.moodboards && project.globalAssets.moodboards.length > 0 && (
+            {moodboards && moodboards.length > 0 && (
               <div className="flex flex-col gap-2 mt-2">
                 <div className="flex items-center gap-2 text-slate-300 font-medium text-sm">
                   <ImageIcon size={16} />
                   <h3>무드보드</h3>
                 </div>
                 <div className="flex flex-col gap-4">
-                  {project.globalAssets.moodboards.map((board) => (
+                  {moodboards.map((board) => (
                     <div key={board.id} className="flex flex-col gap-2">
                       <span className="text-xs text-slate-300 font-medium">{board.label}</span>
                       <div className="grid grid-cols-2 gap-1.5">

@@ -63,6 +63,7 @@ const VersionSlots = memo(function VersionSlots({ cutId, versions }: VersionSlot
               e.stopPropagation(); // CutCard onClick으로 버블링 방지
               switchVideoVersion(cutId, v.versionId);
             }}
+            onPointerDown={(e) => e.stopPropagation()} // DndKit 드래그 시작 방지
             className={clsx(
               'w-8 h-5 rounded overflow-hidden border transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400',
               v.isSelected
@@ -83,6 +84,7 @@ const VersionSlots = memo(function VersionSlots({ cutId, versions }: VersionSlot
               e.stopPropagation();
               switchVideoVersion(cutId, v.versionId);
             }}
+            onPointerDown={(e) => e.stopPropagation()} // DndKit 드래그 시작 방지
             className={clsx(
               'w-2.5 h-2.5 rounded-sm transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400',
               v.isSelected

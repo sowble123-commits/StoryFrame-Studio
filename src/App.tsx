@@ -26,10 +26,17 @@ function App() {
           <AppShell>
             <AnimatePresence mode="wait">
               {hasProject ? (
-                <motion.div key="editor" {...sfMotion.fade} className="w-full h-full flex flex-col overflow-hidden">
-                  {currentTab === 'cuts' && <EditorPage />}
-                  {currentTab === 'audio' && <AudioPage />}
-                  {currentTab === 'settings' && <SettingsPage />}
+                <motion.div key="editor" {...sfMotion.fade} className="w-full h-full flex flex-col overflow-hidden relative">
+                  {/* Keep-alive 라우팅: 상태 유지를 위해 언마운트하지 않고 display로 제어 */}
+                  <div className={currentTab === 'cuts' ? 'flex-1 overflow-hidden' : 'hidden'}>
+                    <EditorPage />
+                  </div>
+                  <div className={currentTab === 'audio' ? 'flex-1 overflow-hidden' : 'hidden'}>
+                    <AudioPage />
+                  </div>
+                  <div className={currentTab === 'settings' ? 'flex-1 overflow-hidden' : 'hidden'}>
+                    <SettingsPage />
+                  </div>
                 </motion.div>
               ) : (
                 <motion.div key="hub" {...sfMotion.fade} className="w-full h-full flex flex-col overflow-hidden">
