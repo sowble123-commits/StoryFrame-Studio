@@ -28,7 +28,11 @@ export function StatusBar() {
             />
           </button>
         )}
-        <span>준비됨</span>
+        <span>
+          {project?.progress?.pendingTasks && project.progress.pendingTasks.length > 0
+            ? `처리 중: ${project.progress.pendingTasks[0]}`
+            : '준비됨'}
+        </span>
       </div>
     </div>
   );
