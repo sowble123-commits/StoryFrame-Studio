@@ -1,4 +1,4 @@
-# StoryFrame-Studio Sprint Backlog & Issue Tracker
+﻿# StoryFrame-Studio Sprint Backlog & Issue Tracker
 
 이 문서는 기획서(\PLAN.md\) 대비 미구현된 모든 기능과 버그를 나열한 **최종 작업 목록**입니다. 
 \AI_DEVELOPMENT_PLAYBOOK.md\의 '수직적 개발(Vertical Development)' 룰에 따라 하나씩 관통하여 해결합니다.
@@ -39,5 +39,5 @@
   - **해결 목표:** 아웃(Out)점의 마지막 프레임 이미지를 추출하여 다음 컷 생성 시 참조 이미지로 활용하는 로직.
 * [x] **P4-03: StatusBar 렌더링 진행률 이벤트 연동**
   - **해결 목표:** FFmpeg의 렌더링 진행률(Progress)을 Tauri Event로 프론트에 쏴서 StatusBar에 실시간 퍼센트(%)로 표시.
-* [ ] **P4-04: FCPXML 1.11 내보내기 로직**
+* [x] **P4-04: FCPXML 1.11 내보내기 로직**
   - **해결 목표:** 타임라인 데이터를 Final Cut Pro 호환 XML(FCPXML) 규격의 텍스트로 변환하여 로컬 경로에 저장.
