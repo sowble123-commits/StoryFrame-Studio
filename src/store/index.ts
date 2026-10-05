@@ -17,6 +17,8 @@ interface StoryFrameStore {
   error: string | null;
   recentProjects: RecentProject[];
   viewMode: 'grid' | 'list';
+  currentTab: 'cuts' | 'audio' | 'settings';
+  setCurrentTab: (tab: 'cuts' | 'audio' | 'settings') => void;
   setViewMode: (mode: 'grid' | 'list') => void;
   setProject: (project: ProjectState | null) => void;
   loadProject: (path?: string) => Promise<void>;
@@ -53,6 +55,12 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
     error: null,
     recentProjects: [],
     viewMode: 'grid',
+    currentTab: 'cuts',
+    setCurrentTab: (tab) => {
+      set((state) => {
+        state.currentTab = tab;
+      });
+    },
     setViewMode: (mode) => {
       set((state) => {
         state.viewMode = mode;

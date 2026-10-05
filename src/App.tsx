@@ -4,6 +4,8 @@ import { TitleBar } from '@/components/layout/TitleBar';
 import { useStoryFrameStore } from '@/store';
 import { ProjectHubPage } from '@/views/ProjectHubPage';
 import { EditorPage } from '@/views/EditorPage';
+import { AudioPage } from '@/views/AudioPage';
+import { SettingsPage } from '@/views/SettingsPage';
 import { Toaster } from 'sonner';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -11,6 +13,7 @@ import { sfMotion } from '@/lib/motion';
 
 function App() {
   const hasProject = useStoryFrameStore((state) => !!state.project);
+  const currentTab = useStoryFrameStore((state) => state.currentTab);
   // 에러 후 복구: key를 바꿔 ErrorBoundary 서브트리를 새로 마운트 (앱 전체 리로드 불필요)
   const [resetKey, setResetKey] = useState(0);
   const handleReset = useCallback(() => setResetKey((k) => k + 1), []);
@@ -24,7 +27,9 @@ function App() {
             <AnimatePresence mode="wait">
               {hasProject ? (
                 <motion.div key="editor" {...sfMotion.fade} className="w-full h-full flex flex-col overflow-hidden">
-                  <EditorPage />
+                  {currentTab === 'cuts' && <EditorPage />}
+                  {currentTab === 'audio' && <AudioPage />}
+                  {currentTab === 'settings' && <SettingsPage />}
                 </motion.div>
               ) : (
                 <motion.div key="hub" {...sfMotion.fade} className="w-full h-full flex flex-col overflow-hidden">

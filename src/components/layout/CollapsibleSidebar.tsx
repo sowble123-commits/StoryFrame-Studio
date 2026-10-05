@@ -8,6 +8,8 @@ export function CollapsibleSidebar() {
   const project = useStoryFrameStore((state) => state.project);
   const isCollapsed = project?.uiState.sidebarCollapsed ?? false;
   const toggleSidebar = useStoryFrameStore((state) => state.toggleSidebar);
+  const currentTab = useStoryFrameStore((state) => state.currentTab);
+  const setCurrentTab = useStoryFrameStore((state) => state.setCurrentTab);
 
   return (
     <motion.div
@@ -31,8 +33,8 @@ export function CollapsibleSidebar() {
       </div>
 
       <div className="flex-1 flex flex-col py-4 gap-2 px-2 overflow-y-auto overflow-x-hidden custom-scrollbar">
-        <SidebarItem icon={<Film size={20} />} label="컷 관리" isCollapsed={isCollapsed} />
-        <SidebarItem icon={<Music size={20} />} label="오디오" isCollapsed={isCollapsed} />
+        <SidebarItem icon={<Film size={20} />} label="컷 관리" isCollapsed={isCollapsed} isActive={currentTab === 'cuts'} onClick={() => setCurrentTab('cuts')} />
+        <SidebarItem icon={<Music size={20} />} label="오디오" isCollapsed={isCollapsed} isActive={currentTab === 'audio'} onClick={() => setCurrentTab('audio')} />
         
         {project && !isCollapsed && (
           <motion.div 
@@ -104,20 +106,22 @@ export function CollapsibleSidebar() {
         )}
 
         <div className="flex-1" />
-        <SidebarItem icon={<Settings size={20} />} label="설정" isCollapsed={isCollapsed} />
+        <SidebarItem icon={<Settings size={20} />} label="설정" isCollapsed={isCollapsed} isActive={currentTab === 'settings'} onClick={() => setCurrentTab('settings')} />
       </div>
     </motion.div>
   );
 }
 
-function SidebarItem({ icon, label, isCollapsed }: { icon: React.ReactNode; label: string; isCollapsed: boolean }) {
+function SidebarItem({ icon, label, isCollapsed, isActive, onClick }: { icon: React.ReactNode; label: string; isCollapsed: boolean; isActive?: boolean; onClick?: () => void }) {
   return (
     <button 
+      onClick={onClick}
       aria-label={label}
       title={isCollapsed ? label : undefined}
       className={cn(
         "flex items-center p-2 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary w-full",
-        isCollapsed ? "justify-center" : "gap-3"
+        isCollapsed ? "justify-center" : "gap-3",
+        isActive && "bg-slate-800 text-white"
       )}
     >
       <div className="flex-shrink-0">{icon}</div>
