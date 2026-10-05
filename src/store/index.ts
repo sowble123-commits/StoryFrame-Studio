@@ -46,6 +46,7 @@ interface StoryFrameStore {
   setIsPlaying: (playing: boolean) => void;
   setTimelineZoom: (zoom: number) => void;
   updateCutTimeline: (cutId: string, patch: Partial<import('@/types/project').CutTimeline>) => void;
+  addImportedMedia: (mediaPath: string, thumbnailPath: string, durationSec: number) => void;
 }
 
 export const useStoryFrameStore = create<StoryFrameStore>()(
@@ -332,6 +333,71 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
           const dur = cut.timeline.outPointSec - cut.timeline.inPointSec;
           if (dur > 0) cut.timeline.effectiveDurationSec = dur;
         }
+      });
+    },
+    addImportedMedia: (mediaPath, thumbnailPath, durationSec) => {
+      set((state) => {
+        if (!state.project) return;
+        if (!state.project.cuts) {
+          state.project.cuts = [];
+        }
+        
+        const cuts = state.project.cuts;
+        const index = cuts.length + 1;
+        const newCutId = `cut_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        
+        const lastCut = cuts.length > 0 ? cuts[cuts.length - 1] : null;
+        const startTimeSec = lastCut 
+          ? (lastCut.timeline?.absoluteStartSec ?? 0) + (lastCut.timeline?.effectiveDurationSec ?? 0)
+          : 0;
+
+        const newCut: import('@/types/project').Cut = {
+          id: newCutId,
+          index,
+          sectionId: '',
+          story: {
+            description: '',
+            lyrics: '',
+            timeRange: { startSec: startTimeSec, endSec: startTimeSec + durationSec }
+          },
+          illustration: {
+            status: 'Todo',
+            primaryImagePath: '',
+            variantPaths: [],
+            characterRefs: [],
+            moodboardRefs: [],
+            camera: { angle: '', movement: '', notes: '' }
+          },
+          video: {
+            status: 'Todo',
+            motionDifficulty: '',
+            motionDescription: '',
+            lastFramePath: '',
+            versions: [
+              {
+                versionId: `v_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                filePath: mediaPath,
+                durationSec: durationSec,
+                generatedBy: 'import',
+                generatedAt: new Date().toISOString(),
+                isSelected: true,
+                thumbnailPath: thumbnailPath,
+                notes: ''
+              }
+            ]
+          },
+          timeline: {
+            inPointSec: 0,
+            outPointSec: durationSec,
+            effectiveDurationSec: durationSec,
+            absoluteStartSec: startTimeSec,
+            transitionIn: '',
+            transitionOut: ''
+          }
+        };
+        
+        // immer 활용: draft 배열에 직접 요소 추가 (불변성 자동 유지)
+        cuts.push(newCut);
       });
     },
   }))

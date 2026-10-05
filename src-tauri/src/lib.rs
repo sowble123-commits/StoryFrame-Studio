@@ -25,6 +25,7 @@ pub fn run() {
             commands::delete_project,
             ffmpeg::generate_waveform,
             ffmpeg::assemble_roughcut,
+            ffmpeg::import_media,
             export::export_fcpxml,
             export::export_capcut,
             watcher::watch_project,

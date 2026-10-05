@@ -6,7 +6,8 @@ import { PeekPanel } from '@/components/PeekPanel';
 import { LayoutGrid, List, Download } from 'lucide-react';
 import { clsx } from 'clsx';
 import { listen } from '@tauri-apps/api/event';
-import { copyFile, mkdir } from '@tauri-apps/plugin-fs';
+import { invoke } from '@tauri-apps/api/core';
+
 import {
   DndContext,
   closestCenter,
@@ -144,20 +145,34 @@ export function EditorPage() {
         const payload = event.payload as { paths: string[] };
         if (!payload?.paths || !projectPath) return;
 
-        const assetsDir = `${projectPath}/assets`;
-        try {
-          await mkdir(assetsDir, { recursive: true });
-        } catch {
-          // 이미 존재하는 경우 무시
-        }
+        const addImportedMedia = useStoryFrameStore.getState().addImportedMedia;
 
-        for (const filePath of payload.paths) {
-          try {
-            const fileName = filePath.split(/[/\\]/).pop() ?? 'unknown';
-            await copyFile(filePath, `${assetsDir}/${fileName}`);
-          } catch (err) {
-            console.error('[drop] Failed to copy:', filePath, err);
-          }
+        try {
+          const importPromises = payload.paths.map(async (filePath) => {
+            try {
+              const res = await invoke<{mediaPath: string, thumbnailPath: string}>('import_media', { sourcePath: filePath, projectPath });
+              let durationSec = 5.0;
+              try {
+                durationSec = await invoke<number>('probe_duration', { path: filePath });
+              } catch (e) {
+                console.warn('probe_duration failed for', filePath, 'using 5.0s', e);
+              }
+              return { success: true, filePath, res, durationSec };
+            } catch (err) {
+              console.error('[drop] Failed to import:', filePath, err);
+              return { success: false, filePath, err };
+            }
+          });
+
+          const results = await Promise.all(importPromises);
+          
+          results.forEach((result) => {
+            if (result.success && result.res) {
+              addImportedMedia(result.res.mediaPath, result.res.thumbnailPath, result.durationSec!);
+            }
+          });
+        } catch (globalErr) {
+          console.error('[drop] Unexpected error during drag-drop import:', globalErr);
         }
       });
       unlistenRef.current = Promise.resolve(await unlisten) as any;

@@ -209,3 +209,69 @@ pub async fn assemble_roughcut(
     let _ = app.emit("render-progress", 100.0_f64);
     Ok(output_path)
 }
+
+#[tauri::command]
+pub async fn import_media(
+    app: AppHandle,
+    source_path: String,
+    project_path: String,
+) -> Result<Value, String> {
+    use std::path::Path;
+
+    let src_path = Path::new(&source_path);
+    let proj_path = Path::new(&project_path);
+
+    if !tokio::fs::try_exists(&src_path).await.unwrap_or(false) {
+        return Err(format!("Source file does not exist: {}", source_path));
+    }
+
+    let assets_dir = proj_path.join("assets");
+
+    tokio::fs::create_dir_all(&assets_dir)
+        .await
+        .map_err(|e| format!("Failed to create assets directory: {}", e))?;
+
+    let file_name = src_path.file_name().ok_or("Invalid source path")?;
+    let dest_media_path = assets_dir.join(file_name);
+
+    tokio::fs::copy(&src_path, &dest_media_path)
+        .await
+        .map_err(|e| format!("Failed to copy media file: {}", e))?;
+
+    let file_stem = src_path.file_stem().unwrap_or_default().to_string_lossy();
+    let thumb_name = format!("{}_thumb.jpg", file_stem);
+    let dest_thumb_path = assets_dir.join(&thumb_name);
+
+    // Extract thumbnail using sidecar (at 00:00:00)
+    let out = app
+        .shell()
+        .sidecar("ffmpeg")
+        .map_err(|e| format!("Failed to create sidecar: {}", e))?
+        .args([
+            "-y",
+            "-i",
+            &dest_media_path.to_string_lossy(),
+            "-ss",
+            "00:00:00",
+            "-vframes",
+            "1",
+            "-q:v",
+            "2",
+            &dest_thumb_path.to_string_lossy(),
+        ])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to execute ffmpeg for thumbnail: {}", e))?;
+
+    let mut final_thumb = format!("assets/{}", thumb_name);
+    if !out.status.success() {
+        // Fallback: 오디오 파일 등 썸네일 추출 불가 시 에러 반환 대신 빈 문자열 할당
+        eprintln!("Thumbnail extraction failed (might be audio only): {}", String::from_utf8_lossy(&out.stderr));
+        final_thumb = String::new();
+    }
+
+    Ok(json!({
+        "mediaPath": format!("assets/{}", file_name.to_string_lossy()),
+        "thumbnailPath": final_thumb
+    }))
+}
