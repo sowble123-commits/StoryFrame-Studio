@@ -1,8 +1,16 @@
+import { memo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useStoryFrameStore } from '@/store';
 import { useShallow } from 'zustand/react/shallow';
-import { PanelLeftClose, PanelLeftOpen, Film, Music, Settings, Info, Users, Image as ImageIcon } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, Film, Music, Settings, Info, Users, Image as ImageIcon, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+const MAIN_TABS = [
+  { id: 'cuts', label: '컷 관리', icon: Film },
+  { id: 'characters', label: '캐릭터 보드', icon: Users },
+  { id: 'locations', label: '장소 보드', icon: MapPin },
+  { id: 'audio', label: '오디오', icon: Music },
+] as const;
 
 
 export function CollapsibleSidebar() {
@@ -38,8 +46,17 @@ export function CollapsibleSidebar() {
       </div>
 
       <div className="flex-1 flex flex-col py-4 gap-2 px-2 overflow-y-auto overflow-x-hidden custom-scrollbar">
-        <SidebarItem icon={<Film size={20} />} label="컷 관리" isCollapsed={isCollapsed} isActive={currentTab === 'cuts'} onClick={() => setCurrentTab('cuts')} />
-        <SidebarItem icon={<Music size={20} />} label="오디오" isCollapsed={isCollapsed} isActive={currentTab === 'audio'} onClick={() => setCurrentTab('audio')} />
+        {MAIN_TABS.map(({ id, label, icon: Icon }) => (
+          <SidebarItem 
+            key={id}
+            id={id}
+            icon={<Icon size={20} />} 
+            label={label} 
+            isCollapsed={isCollapsed} 
+            isActive={currentTab === id} 
+            onClick={setCurrentTab} 
+          />
+        ))}
         
         {hasProject && !isCollapsed && (
           <motion.div 
@@ -111,16 +128,22 @@ export function CollapsibleSidebar() {
         )}
 
         <div className="flex-1" />
-        <SidebarItem icon={<Settings size={20} />} label="설정" isCollapsed={isCollapsed} isActive={currentTab === 'settings'} onClick={() => setCurrentTab('settings')} />
+        <SidebarItem id="settings" icon={<Settings size={20} />} label="설정" isCollapsed={isCollapsed} isActive={currentTab === 'settings'} onClick={setCurrentTab} />
       </div>
     </motion.div>
   );
 }
 
-function SidebarItem({ icon, label, isCollapsed, isActive, onClick }: { icon: React.ReactNode; label: string; isCollapsed: boolean; isActive?: boolean; onClick?: () => void }) {
+const SidebarItem = memo(function SidebarItem({ 
+  id, icon, label, isCollapsed, isActive, onClick 
+}: { 
+  id: any; icon: React.ReactNode; label: string; isCollapsed: boolean; isActive?: boolean; onClick?: (id: any) => void 
+}) {
+  const handleClick = useCallback(() => onClick?.(id), [id, onClick]);
+  
   return (
     <button 
-      onClick={onClick}
+      onClick={handleClick}
       aria-label={label}
       title={isCollapsed ? label : undefined}
       className={cn(
@@ -133,4 +156,4 @@ function SidebarItem({ icon, label, isCollapsed, isActive, onClick }: { icon: Re
       {!isCollapsed && <span className="whitespace-nowrap">{label}</span>}
     </button>
   );
-}
+});

@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState, useCallback, memo } from 'react';
+import { useEffect, useState, useCallback, memo, useMemo } from 'react';
 import { useStoryFrameStore } from '@/store';
 import { useShallow } from 'zustand/react/shallow';
-import { CutCard } from '@/components/CutCard';
+import { ClipCard } from '@/components/ClipCard';
 import { PeekPanel } from '@/components/PeekPanel';
 import { LayoutGrid, List, Download } from 'lucide-react';
 import { clsx } from 'clsx';
 import { listen } from '@tauri-apps/api/event';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 
 import {
   DndContext,
@@ -24,11 +24,13 @@ import {
   sortableKeyboardCoordinates,
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
-import type { Cut } from '@/types/project';
+import type { Clip } from '@/types/project';
 
-// ─── DragOverlay에서 사용할 경량 고스트 카드 ──────────────────────────────────
-// DragOverlay는 Portal에서 렌더되므로 전체 그리드와 독립. memo로 재렌더 최소화.
-const GhostCard = memo(function GhostCard({ cut }: { cut: Cut }) {
+const GhostCard = memo(function GhostCard({ clip }: { clip: Clip }) {
+  const activeTake = clip.takes[0];
+  const activeFrame = activeTake?.frames[0];
+  if (!activeFrame) return null;
+
   return (
     <div
       className="
@@ -38,9 +40,9 @@ const GhostCard = memo(function GhostCard({ cut }: { cut: Cut }) {
       "
     >
       <div className="h-32 bg-slate-900 border-b border-slate-700 flex items-center justify-center relative overflow-hidden">
-        {cut.illustration.primaryImagePath ? (
+        {activeFrame.F0_reference ? (
           <img
-            src={cut.illustration.primaryImagePath}
+            src={activeFrame.F0_reference}
             alt=""
             className="w-full h-full object-cover"
             draggable={false}
@@ -48,13 +50,10 @@ const GhostCard = memo(function GhostCard({ cut }: { cut: Cut }) {
         ) : (
           <div className="w-8 h-8 rounded bg-slate-700" />
         )}
-        <div className="absolute top-2 left-2 bg-black/60 px-1.5 py-0.5 rounded text-xs font-mono text-slate-300">
-          C{String(cut.index).padStart(3, '0')}
-        </div>
       </div>
       <div className="p-3 flex-1">
         <p className="text-sm text-slate-300 truncate font-medium">
-          {cut.story.description || 'No description'}
+          {activeFrame.description || 'No description'}
         </p>
       </div>
     </div>
@@ -106,93 +105,123 @@ const ViewToggle = memo(function ViewToggle({
 import { PreviewPlayer } from '@/components/timeline/PreviewPlayer';
 import { ExportDialog } from '@/components/ExportDialog';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import type { Sequence } from '@/types/project';
+
+const EMPTY_SEQUENCES: Sequence[] = [];
 
 export function EditorPage() {
   useKeyboardShortcuts();
 
   // Selector 세분화 — 각각 최소 slice만 구독하여 무관한 변경 시 리렌더 방지
   const title      = useStoryFrameStore((s) => s.project?.meta.title ?? '제목 없는 프로젝트');
-  const cutCount   = useStoryFrameStore((s) => s.project?.cuts?.length ?? 0);
-  const cutIds     = useStoryFrameStore(useShallow((s) => s.project?.cuts?.map((c) => c.id) ?? []));
+  const sequencesRaw = useStoryFrameStore(useShallow((s) => s.project?.sequences));
+  const sequences  = sequencesRaw || EMPTY_SEQUENCES;
+  
+  const clipCount  = useMemo(() => sequences.reduce((acc, seq) => acc + seq.clips.length, 0), [sequences]);
+  
   const projectPath = useStoryFrameStore((s) => s.project?.projectPath);
   const viewMode   = useStoryFrameStore((s) => s.viewMode);
   const setViewMode      = useStoryFrameStore((s) => s.setViewMode);
-  const moveCut          = useStoryFrameStore((s) => s.moveCut);
+  const moveClip         = useStoryFrameStore((s) => s.moveClip);
 
-  // 드래그 중인 컷 (고스트 렌더용)
-  const [activeCut, setActiveCut] = useState<Cut | null>(null);
+  const addClip = useStoryFrameStore((s) => s.addClip);
+
+  // 드래그 중인 클립
+  const [activeClip, setActiveClip] = useState<Clip | null>(null);
   const [isExportOpen, setIsExportOpen] = useState(false);
 
-  const clips = useStoryFrameStore(useShallow((s) => {
-    return s.project?.cuts?.map(c => {
-      const activeVersion = c.video.versions?.find(v => v.isSelected) || c.video.versions?.[0];
-      if (!activeVersion?.filePath) return undefined;
-      return {
-        path: `${s.project?.projectPath}/assets/${activeVersion.filePath}`,
-        inPoint: c.timeline.inPointSec,
-        outPoint: c.timeline.outPointSec
-      };
-    }).filter(Boolean) as { path: string, inPoint: number, outPoint: number }[] ?? [];
-  }));
+  // 이미지 드롭용 모달 상태
+  const [dropPaths, setDropPaths] = useState<string[]>([]);
+  const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
+
+  // 클립 내보내기용 (임시 빈 배열)
+  const clipsForExport = useMemo(() => [], []);
 
   // ── 파일 드롭 리스너 (메모리 릭 방지) ──────────────────────────────────────
-  // projectPath가 바뀔 때만 재등록하되, Promise를 ref에 보관해 cleanup에서 확실히 해제
-  const unlistenRef = useRef<ReturnType<typeof listen> | null>(null);
-
   useEffect(() => {
-    // 이전 리스너 해제
-    if (unlistenRef.current) {
-      unlistenRef.current.then((f) => f());
-    }
+    let unlistenFn: (() => void) | undefined;
+    let isMounted = true;
 
     const registerListener = async () => {
-      const unlisten = listen('tauri://drag-drop', async (event) => {
-        const payload = event.payload as { paths: string[] };
-        if (!payload?.paths || !projectPath) return;
+      try {
+        unlistenFn = await listen('tauri://drag-drop', async (event) => {
+          if (!isMounted) return; // 컴포넌트 언마운트 시 실행 방지
+          const payload = event.payload as { paths: string[] };
+          if (!payload?.paths || !projectPath) return;
 
-        const addImportedMedia = useStoryFrameStore.getState().addImportedMedia;
-
-        try {
-          const importPromises = payload.paths.map(async (filePath) => {
-            try {
-              const res = await invoke<{mediaPath: string, thumbnailPath: string}>('import_media', { sourcePath: filePath, projectPath });
-              let durationSec = 5.0;
-              try {
-                durationSec = await invoke<number>('probe_duration', { path: filePath });
-              } catch (e) {
-                console.warn('probe_duration failed for', filePath, 'using 5.0s', e);
-              }
-              return { success: true, filePath, res, durationSec };
-            } catch (err) {
-              console.error('[drop] Failed to import:', filePath, err);
-              return { success: false, filePath, err };
-            }
-          });
-
-          const results = await Promise.all(importPromises);
-          
-          results.forEach((result) => {
-            if (result.success && result.res) {
-              addImportedMedia(result.res.mediaPath, result.res.thumbnailPath, result.durationSec!);
-            }
-          });
-        } catch (globalErr) {
-          console.error('[drop] Unexpected error during drag-drop import:', globalErr);
+          const imagePaths = payload.paths.filter(p => /\.(png|jpe?g|gif|webp)$/i.test(p));
+          if (imagePaths.length > 0) {
+            setDropPaths(imagePaths);
+            setIsPromptModalOpen(true);
+          }
+        });
+        
+        if (!isMounted && unlistenFn) {
+          unlistenFn();
         }
-      });
-      unlistenRef.current = Promise.resolve(await unlisten) as any;
+      } catch (err) {
+        console.error('Drag-drop listener registration failed:', err);
+      }
     };
 
     registerListener();
 
     return () => {
-      // 컴포넌트 언마운트 or projectPath 변경 시 반드시 해제
-      if (unlistenRef.current) {
-        unlistenRef.current.then((f) => f());
-        unlistenRef.current = null;
+      isMounted = false;
+      if (unlistenFn) {
+        unlistenFn();
       }
     };
-  }, [projectPath]); // project 전체 대신 projectPath만 의존
+  }, [projectPath]);
+
+  const handlePromptSubmit = async (promptText: string) => {
+    setIsPromptModalOpen(false);
+    
+    const currentSequences = useStoryFrameStore.getState().project?.sequences ?? [];
+    if (currentSequences.length === 0) return;
+    
+    const targetSeqId = useStoryFrameStore.getState().project?.uiState?.selectedSequenceId || currentSequences[0].id;
+    
+    for (const path of dropPaths) {
+      try {
+        await invoke('inject_metadata', { filePath: path, prompt: promptText });
+        
+        const assetUrl = convertFileSrc(path);
+        
+        const clip: Clip = {
+          id: crypto.randomUUID(),
+          takes: [
+            {
+              id: crypto.randomUUID(),
+              frames: [
+                {
+                  id: crypto.randomUUID(),
+                  F0_reference: assetUrl,
+                  variants: [],
+                  isHardCut: false,
+                  description: promptText,
+                  prompt: promptText,
+                }
+              ],
+              videoVersion: null,
+              durationSec: 3,
+            }
+          ]
+        };
+        
+        addClip(targetSeqId, clip);
+      } catch (err) {
+        console.error('Failed to process dropped image:', err);
+      }
+    }
+    
+    setDropPaths([]);
+  };
+
+  const handlePromptCancel = () => {
+    setIsPromptModalOpen(false);
+    setDropPaths([]);
+  };
 
   // ── DnD 핸들러 ────────────────────────────────────────────────────────────
   const sensors = useSensors(
@@ -202,66 +231,72 @@ export function EditorPage() {
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
-      const currentCuts = useStoryFrameStore.getState().project?.cuts ?? [];
-      const found = currentCuts.find((c) => c.id === event.active.id);
-      setActiveCut(found ?? null);
+      const currentSequences = useStoryFrameStore.getState().project?.sequences ?? [];
+      let found: Clip | null = null;
+      for (const seq of currentSequences) {
+        const c = seq.clips.find(clip => clip.id === event.active.id);
+        if (c) {
+          found = c;
+          break;
+        }
+      }
+      setActiveClip(found);
     },
     [],
   );
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
-      setActiveCut(null);
+      setActiveClip(null);
       const { active, over } = event;
       if (over && active.id !== over.id) {
-        const currentCuts = useStoryFrameStore.getState().project?.cuts ?? [];
-        const oldIndex = currentCuts.findIndex((c) => c.id === active.id);
-        const newIndex = currentCuts.findIndex((c) => c.id === over.id);
-        if (oldIndex !== -1 && newIndex !== -1) {
-          moveCut(oldIndex, newIndex);
+        const currentSequences = useStoryFrameStore.getState().project?.sequences ?? [];
+        for (const seq of currentSequences) {
+          const oldIndex = seq.clips.findIndex((c) => c.id === active.id);
+          const newIndex = seq.clips.findIndex((c) => c.id === over.id);
+          if (oldIndex !== -1 && newIndex !== -1) {
+            moveClip(seq.id, oldIndex, newIndex);
+            break;
+          }
         }
       }
     },
-    [moveCut],
+    [moveClip],
   );
 
-  const handleDragCancel = useCallback(() => setActiveCut(null), []);
+  const handleDragCancel = useCallback(() => setActiveClip(null), []);
 
-  // ── 빈 프로젝트 가드 ──────────────────────────────────────────────────────
-  if (!cutIds.length && !title) return null;
+  if (!sequences.length && !title) return null;
 
   return (
     <div className="flex flex-col h-full w-full bg-slate-950 overflow-hidden relative">
-
-      {/* ── 에디터 헤더 ── */}
       <header className="flex justify-between items-center px-6 py-3.5 border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm shrink-0">
         <div>
           <h2 className="text-lg font-bold text-slate-200 leading-tight">{title}</h2>
-          <p className="text-xs text-slate-500 mt-0.5">{cutCount} Cuts</p>
+          <p className="text-xs text-slate-500 mt-0.5">{clipCount} Clips</p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsExportOpen(true)}
-            disabled={cutIds.length === 0}
+            disabled={clipCount === 0}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download size={16} />
             <span>내보내기</span>
           </button>
-          <ViewToggle viewMode={viewMode} onSet={setViewMode} disabled={cutIds.length === 0} />
+          <ViewToggle viewMode={viewMode} onSet={setViewMode} disabled={clipCount === 0} />
         </div>
       </header>
 
-      {/* ── 컷 그리드 & 프리뷰 ── */}
       <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 overflow-y-auto p-5 relative border-r border-slate-800">
-          {cutIds.length === 0 ? (
+        <div className="flex-1 overflow-y-auto p-5 relative border-r border-slate-800 custom-scrollbar">
+          {clipCount === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-600">
               <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-slate-700 flex items-center justify-center">
                 <LayoutGrid size={24} className="text-slate-700" />
               </div>
-              <p className="text-sm">프로젝트에 컷이 없습니다.</p>
-              <p className="text-xs text-slate-700">미디어 파일을 드래그 앤 드롭하여 가져오세요</p>
+              <p className="text-sm">프로젝트에 클립이 없습니다.</p>
+              <p className="text-xs text-slate-700">새 시퀀스와 클립을 추가하세요.</p>
             </div>
           ) : (
             <DndContext
@@ -271,26 +306,38 @@ export function EditorPage() {
               onDragEnd={handleDragEnd}
               onDragCancel={handleDragCancel}
             >
-              <SortableContext items={cutIds} strategy={rectSortingStrategy}>
-                <div
-                  className={clsx(
-                    'grid gap-4',
-                    viewMode === 'grid'
-                      ? 'grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3'
-                      : 'grid-cols-1 max-w-4xl mx-auto',
-                  )}
-                >
-                  {cutIds.map((id) => (
-                    <CutCardWrapper
-                      key={id}
-                      id={id}
-                      viewMode={viewMode}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
+              <div className="flex flex-col gap-10">
+                {sequences.map(seq => (
+                  <div key={seq.id} className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2 px-1">
+                      <div className="w-1 h-4 bg-blue-500 rounded-full" />
+                      <h3 className="text-sm font-bold text-slate-300 tracking-wide uppercase">{seq.label}</h3>
+                      <span className="text-xs text-slate-600 font-medium ml-2">{seq.clips.length} Clips</span>
+                    </div>
+                    
+                    <SortableContext items={seq.clips.map(c => c.id)} strategy={rectSortingStrategy}>
+                      <div
+                        className={clsx(
+                          'grid gap-4',
+                          viewMode === 'grid'
+                            ? 'grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3'
+                            : 'grid-cols-1 max-w-4xl',
+                        )}
+                      >
+                        {seq.clips.map((clip) => (
+                          <ClipCardWrapper
+                            key={clip.id}
+                            sequenceId={seq.id}
+                            clipId={clip.id}
+                            viewMode={viewMode}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </div>
+                ))}
+              </div>
 
-              {/* DragOverlay: 드래그 중 고스트를 Portal에 독립 렌더 → 그리드 리렌더 없음 */}
               <DragOverlay
                 adjustScale={false}
                 dropAnimation={{
@@ -298,13 +345,13 @@ export function EditorPage() {
                   easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
                 }}
               >
-                {activeCut ? (
+                {activeClip ? (
                   <div
                     className={clsx(
                       viewMode === 'grid' ? 'w-52' : 'w-full max-w-4xl',
                     )}
                   >
-                    <GhostCard cut={activeCut} />
+                    <GhostCard clip={activeClip} />
                   </div>
                 ) : null}
               </DragOverlay>
@@ -312,39 +359,98 @@ export function EditorPage() {
           )}
         </div>
         
-        {/* PreviewPlayer Section */}
-        <div className="w-[45%] shrink-0 p-4 bg-slate-950 flex flex-col">
+        <div className="w-[45%] shrink-0 p-4 bg-slate-950 flex flex-col border-l border-slate-800">
           <PreviewPlayer />
         </div>
       </div>
 
-      {/* ── PeekPanel ── */}
       <PeekPanel />
 
-      {/* ── 내보내기 모달 ── */}
       <ExportDialog 
         isOpen={isExportOpen} 
         onClose={() => setIsExportOpen(false)} 
-        clips={clips} 
+        clips={clipsForExport} 
+      />
+
+      <DropPromptModal
+        isOpen={isPromptModalOpen}
+        paths={dropPaths}
+        onSubmit={handlePromptSubmit}
+        onCancel={handlePromptCancel}
       />
     </div>
   );
 }
 
+const ClipCardWrapper = memo(function ClipCardWrapper({ sequenceId, clipId, viewMode }: { sequenceId: string, clipId: string, viewMode: 'grid' | 'list' }) {
+  const clip = useStoryFrameStore(useCallback((s) => s.project?.sequences?.find(seq => seq.id === sequenceId)?.clips?.find(c => c.id === clipId), [sequenceId, clipId]));
+  const isSelected = useStoryFrameStore(useCallback((s) => s.project?.uiState?.selectedClipId === clipId, [clipId]));
+  const setSelectedIds = useStoryFrameStore((s) => s.setSelectedIds);
 
-function CutCardWrapper({ id, viewMode }: { id: string, viewMode: 'grid' | 'list' }) {
-  const cut = useStoryFrameStore((s) => s.project?.cuts?.find(c => c.id === id));
-  const isSelected = useStoryFrameStore((s) => s.project?.uiState?.selectedCutId === id);
-  const setSelectedCutId = useStoryFrameStore((s) => s.setSelectedCutId);
-
-  if (!cut) return null;
+  if (!clip) return null;
 
   return (
-    <CutCard
-      cut={cut}
+    <ClipCard
+      sequenceId={sequenceId}
+      clip={clip}
       viewMode={viewMode}
       isSelected={isSelected}
-      onClick={() => setSelectedCutId(id)}
+      onClick={() => setSelectedIds(sequenceId, clipId, null, null)}
     />
   );
-}
+});
+
+const DropPromptModal = memo(function DropPromptModal({
+  isOpen,
+  paths,
+  onSubmit,
+  onCancel,
+}: {
+  isOpen: boolean;
+  paths: string[];
+  onSubmit: (prompt: string) => void;
+  onCancel: () => void;
+}) {
+  const [promptText, setPromptText] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setPromptText('');
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-6 w-[480px]">
+        <h3 className="text-xl font-bold text-slate-100 mb-4">
+          Add Metadata for {paths.length} Image(s)
+        </h3>
+        <p className="text-sm text-slate-400 mb-4">
+          Enter a prompt to associate with the dropped images.
+        </p>
+        <textarea
+          value={promptText}
+          onChange={(e) => setPromptText(e.target.value)}
+          className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-slate-200 focus:outline-none focus:border-blue-500 min-h-[100px]"
+          placeholder="e.g. A beautiful sunset over the mountains..."
+        />
+        <div className="flex justify-end gap-3 mt-6">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onSubmit(promptText)}
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors"
+          >
+            Add
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});

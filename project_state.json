@@ -38,8 +38,13 @@
       },
       {
         "cutId": "system",
+        "task": "phase2_rust",
+        "note": "P2-01 (EXIF metadata injection) 완료"
+      },
+      {
+        "cutId": "system",
         "task": "phase5_ui",
-        "note": "P5-02 (Sidebar metadata rendering), P5-03 (sfMotion Framer Motion animations), P5-04 (A11y focus rings, ARIA labels, tab flow) 완료"
+        "note": "P2-02, P5-02 (Sidebar metadata rendering), P5-03 (sfMotion Framer Motion animations), P5-04 (A11y focus rings, ARIA labels, tab flow) 완료"
       },
       {
         "cutId": "system",
@@ -60,6 +65,11 @@
         "cutId": "system",
         "task": "phase4_fcpxml",
         "note": "P4-04 (FCPXML 1.11 export logic) completed"
+      },
+      {
+        "cutId": "system",
+        "task": "phase1",
+        "note": "Phase 1 UI 개편 (마스터 레이아웃, 시퀀스 그리드, 캡션 토글) 및 Claude 최적화 적용 완료"
       }
     ]
   },

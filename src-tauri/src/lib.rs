@@ -30,7 +30,8 @@ pub fn run() {
             export::export_fcpxml,
             export::export_capcut,
             watcher::watch_project,
-            watcher::unwatch_project
+            watcher::unwatch_project,
+            commands::inject_metadata
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
