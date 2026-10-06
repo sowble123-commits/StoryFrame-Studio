@@ -5,7 +5,11 @@
     "src/components/ExportDialog.tsx",
     "src/components/layout/CollapsibleSidebar.tsx",
     "src/views/AudioPage.tsx",
-    "src/views/SettingsPage.tsx"
+    "src/views/SettingsPage.tsx",
+    "src/store/index.ts",
+    "src/views/CharactersPage.tsx",
+    "src/views/LocationsPage.tsx",
+    "src/views/EditorPage.tsx"
   ],
   "acceptance_tests": [
     "tests/acceptance/ui.spec.ts"
