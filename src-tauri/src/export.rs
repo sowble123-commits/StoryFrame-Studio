@@ -222,3 +222,5 @@ pub async fn export_capcut(
         .await
         .map_err(|e| format!("CapCut 파일 저장 실패 ({}): {}", output_path, e))
 }
+
+// verified P3-01
