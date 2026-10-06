@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { save } from '@tauri-apps/plugin-dialog';
@@ -57,6 +57,18 @@ const ExportDialogInner: React.FC<ExportDialogProps> = ({ isOpen, onClose, clips
   const [isExporting, setIsExporting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const unlistenRef = useRef<(() => void) | null>(null);
+
+  // 엄격한 이벤트 리스너 해제 (메모리 릭 및 비동기 타이밍 이슈 방지)
+  useEffect(() => {
+    return () => {
+      if (unlistenRef.current) {
+        unlistenRef.current();
+        unlistenRef.current = null;
+      }
+    };
+  }, []);
+
   const handleClose = () => {
     if (isExporting) return;
     setErrorMessage(null);
@@ -78,12 +90,18 @@ const ExportDialogInner: React.FC<ExportDialogProps> = ({ isOpen, onClose, clips
     setIsExporting(true);
     setProgress(0);
 
-    // invoke 이전에 리스너 등록 → 초기 progress 이벤트 유실 방지
-    const unlisten = await listen<number>('render-progress', (e) => {
-      setProgress(Math.max(0, Math.min(100, e.payload)));
-    });
+    // 기존 리스너가 남아있다면 정리
+    if (unlistenRef.current) {
+      unlistenRef.current();
+      unlistenRef.current = null;
+    }
 
     try {
+      // invoke 이전에 리스너 등록 → 초기 progress 이벤트 유실 방지
+      unlistenRef.current = await listen<number>('render-progress', (e) => {
+        setProgress(Math.max(0, Math.min(100, e.payload)));
+      });
+
       await invoke(cfg.command, {
         clips,
         outputPath: filePath,
@@ -93,7 +111,6 @@ const ExportDialogInner: React.FC<ExportDialogProps> = ({ isOpen, onClose, clips
       toast.success('내보내기 완료', { description: filePath });
       setIsExporting(false);
       handleClose();
-      return;
     } catch (err) {
       const msg = typeof err === 'string' ? err : (err as Error)?.message ?? String(err);
       console.error(err);
@@ -102,7 +119,10 @@ const ExportDialogInner: React.FC<ExportDialogProps> = ({ isOpen, onClose, clips
         description: msg.split('\n').filter(Boolean).slice(-1)[0] ?? 'Unknown error',
       });
     } finally {
-      unlisten();
+      if (unlistenRef.current) {
+        unlistenRef.current();
+        unlistenRef.current = null;
+      }
       setIsExporting(false);
     }
   };

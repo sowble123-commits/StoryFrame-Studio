@@ -11,7 +11,9 @@ const FRAME_TICKS: u64 = 100;
 
 /// 초 -> FCPXML Rational Time. 프레임 경계로 반올림 (예: 3.3333s -> "10000/3000s")
 fn to_rational(seconds: f64) -> String {
-    let frames = (seconds.max(0.0) * TIMEBASE as f64 / FRAME_TICKS as f64).round() as u64;
+    // NaN이나 Infinity에 의한 panic 방지 (Error Handling 강화)
+    let safe_sec = if seconds.is_finite() && seconds >= 0.0 { seconds } else { 0.0 };
+    let frames = (safe_sec * TIMEBASE as f64 / FRAME_TICKS as f64).round() as u64;
     format!("{}/{}s", frames * FRAME_TICKS, TIMEBASE)
 }
 
@@ -78,7 +80,7 @@ async fn probe_all(app: &AppHandle, clips: &[crate::ffmpeg::ClipConfig]) -> Resu
     
     let mut results = Vec::with_capacity(clips.len());
     for t in tasks {
-        let res = t.await.map_err(|e| e.to_string())??;
+        let res = t.await.map_err(|e| format!("태스크 실행 오류: {}", e))??;
         results.push(res);
     }
     Ok(results)
@@ -91,7 +93,7 @@ pub async fn export_fcpxml(
     output_path: String,
 ) -> Result<(), String> {
     if clips.is_empty() {
-        return Err("No clips to export".to_string());
+        return Err("내보낼 클립이 없습니다.".to_string());
     }
     let durations = probe_all(&app, &clips).await?;
 
@@ -147,8 +149,10 @@ pub async fn export_fcpxml(
         total = to_rational(offset),
     );
 
-    // 동기 fs::write -> 비동기 tokio::fs::write 로 대체
-    tokio::fs::write(&output_path, xml).await.map_err(|e| e.to_string())
+    // 비동기 tokio::fs::write 활용 및 명확한 에러 핸들링
+    tokio::fs::write(&output_path, xml)
+        .await
+        .map_err(|e| format!("FCPXML 파일 저장 실패 ({}): {}", output_path, e))
 }
 
 #[tauri::command]
@@ -158,10 +162,15 @@ pub async fn export_capcut(
     output_path: String,
 ) -> Result<(), String> {
     if clips.is_empty() {
-        return Err("No clips to export".to_string());
+        return Err("내보낼 클립이 없습니다.".to_string());
     }
     let durations = probe_all(&app, &clips).await?;
-    let to_us = |s: f64| (s * 1_000_000.0).round() as u64; 
+    
+    // NaN이나 Infinity에 의한 panic 방지 (Error Handling)
+    let to_us = |s: f64| {
+        let safe_s = if s.is_finite() && s >= 0.0 { s } else { 0.0 };
+        (safe_s * 1_000_000.0).round() as u64
+    }; 
 
     let mut materials = Vec::with_capacity(clips.len());
     let mut segments = Vec::with_capacity(clips.len());
@@ -206,6 +215,10 @@ pub async fn export_capcut(
         }]
     });
 
-    let s = serde_json::to_string_pretty(&draft).map_err(|e| e.to_string())?;
-    tokio::fs::write(&output_path, s).await.map_err(|e| e.to_string())
+    let s = serde_json::to_string_pretty(&draft)
+        .map_err(|e| format!("CapCut JSON 직렬화 실패: {}", e))?;
+        
+    tokio::fs::write(&output_path, s)
+        .await
+        .map_err(|e| format!("CapCut 파일 저장 실패 ({}): {}", output_path, e))
 }

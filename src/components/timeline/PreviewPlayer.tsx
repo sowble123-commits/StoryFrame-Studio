@@ -114,9 +114,18 @@ export function PreviewPlayer() {
     }
   }, []);
 
+  const handleLoadedMetadata = useCallback(() => {
+    const s = useStoryFrameStore.getState();
+    sync(s.isPlaying ? playbackClock.time : s.currentTime, true);
+  }, [sync]);
+
   useEffect(() => {
     let rafId = 0;
     let isMounted = true;
+    
+    // 메모리 릭(Memory Leak) 방지를 위해 마운트 당시의 ref 값을 안전하게 캡처
+    const vRef = videoRef.current;
+    const aRef = audioRef.current;
 
     const tick = () => {
       if (!isMounted) return;
@@ -163,8 +172,9 @@ export function PreviewPlayer() {
       isMounted = false;
       stopLoop();
       unsub();
-      videoRef.current?.pause();
-      audioRef.current?.pause();
+      // 언마운트 시 이미 사라졌을 수도 있는 최신 ref 대신 캡처된 ref를 사용해 깔끔하게 정지
+      if (vRef) vRef.pause();
+      if (aRef) aRef.pause();
     };
   }, [sync]);
 
@@ -184,10 +194,7 @@ export function PreviewPlayer() {
           ref={audioRef}
           src={audioSource}
           preload="auto"
-          onLoadedMetadata={() => {
-            const s = useStoryFrameStore.getState();
-            sync(s.isPlaying ? playbackClock.time : s.currentTime, true);
-          }}
+          onLoadedMetadata={handleLoadedMetadata}
           className="hidden"
         />
       )}
@@ -201,10 +208,7 @@ export function PreviewPlayer() {
             muted
             playsInline
             preload="auto"
-            onLoadedMetadata={() => {
-              const s = useStoryFrameStore.getState();
-              sync(s.isPlaying ? playbackClock.time : s.currentTime, true);
-            }}
+            onLoadedMetadata={handleLoadedMetadata}
           />
         ) : imageSource ? (
           <img
