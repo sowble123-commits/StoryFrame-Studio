@@ -6,6 +6,8 @@ import { ProjectHubPage } from '@/views/ProjectHubPage';
 import { EditorPage } from '@/views/EditorPage';
 import { AudioPage } from '@/views/AudioPage';
 import { SettingsPage } from '@/views/SettingsPage';
+import { CharactersPage } from '@/views/CharactersPage';
+import { LocationsPage } from '@/views/LocationsPage';
 import { Toaster } from 'sonner';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -30,6 +32,12 @@ function App() {
                   {/* Keep-alive 라우팅: 상태 유지를 위해 언마운트하지 않고 display로 제어 */}
                   <div className={currentTab === 'cuts' ? 'flex-1 overflow-hidden' : 'hidden'}>
                     <EditorPage />
+                  </div>
+                  <div className={currentTab === 'characters' ? 'flex-1 overflow-hidden' : 'hidden'}>
+                    <CharactersPage />
+                  </div>
+                  <div className={currentTab === 'locations' ? 'flex-1 overflow-hidden' : 'hidden'}>
+                    <LocationsPage />
                   </div>
                   <div className={currentTab === 'audio' ? 'flex-1 overflow-hidden' : 'hidden'}>
                     <AudioPage />

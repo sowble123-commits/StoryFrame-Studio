@@ -16,8 +16,8 @@ interface StoryFrameStore {
   error: string | null;
   recentProjects: RecentProject[];
   viewMode: 'grid' | 'list';
-  currentTab: 'cuts' | 'audio' | 'settings';
-  setCurrentTab: (tab: 'cuts' | 'audio' | 'settings') => void;
+  currentTab: 'cuts' | 'audio' | 'characters' | 'locations' | 'settings';
+  setCurrentTab: (tab: 'cuts' | 'audio' | 'characters' | 'locations' | 'settings') => void;
   setViewMode: (mode: 'grid' | 'list') => void;
   setProject: (project: ProjectState | null) => void;
   loadProject: (path?: string) => Promise<void>;

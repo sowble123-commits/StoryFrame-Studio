@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { useStoryFrameStore } from '@/store';
 import { useShallow } from 'zustand/react/shallow';
-import { PanelLeftClose, PanelLeftOpen, Film, Music, Settings, Info, Users, Image as ImageIcon } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, Film, Music, Settings, Info, Users, Image as ImageIcon, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 
@@ -39,6 +39,8 @@ export function CollapsibleSidebar() {
 
       <div className="flex-1 flex flex-col py-4 gap-2 px-2 overflow-y-auto overflow-x-hidden custom-scrollbar">
         <SidebarItem icon={<Film size={20} />} label="컷 관리" isCollapsed={isCollapsed} isActive={currentTab === 'cuts'} onClick={() => setCurrentTab('cuts')} />
+        <SidebarItem icon={<Users size={20} />} label="캐릭터 보드" isCollapsed={isCollapsed} isActive={currentTab === 'characters'} onClick={() => setCurrentTab('characters')} />
+        <SidebarItem icon={<MapPin size={20} />} label="장소 보드" isCollapsed={isCollapsed} isActive={currentTab === 'locations'} onClick={() => setCurrentTab('locations')} />
         <SidebarItem icon={<Music size={20} />} label="오디오" isCollapsed={isCollapsed} isActive={currentTab === 'audio'} onClick={() => setCurrentTab('audio')} />
         
         {hasProject && !isCollapsed && (
