@@ -486,15 +486,16 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
     addCharacterSheet: (sheet) => {
       set((state) => {
         if (!state.project) return;
-        if (!state.project.globalAssets) state.project.globalAssets = { characterSheets: [], moodboards: [] };
-        if (!state.project.globalAssets.characterSheets) state.project.globalAssets.characterSheets = [];
+        state.project.globalAssets ??= { characterSheets: [], moodboards: [] };
+        state.project.globalAssets.characterSheets ??= [];
         state.project.globalAssets.characterSheets.push(sheet);
       });
     },
 
     updateCharacterSheet: (id, patch) => {
       set((state) => {
-        const sheets = state.project?.globalAssets?.characterSheets;
+        if (!state.project) return;
+        const sheets = state.project.globalAssets?.characterSheets;
         if (sheets) {
           const sheet = sheets.find(s => s.id === id);
           if (sheet) Object.assign(sheet, patch);
@@ -504,25 +505,24 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
 
     deleteCharacterSheet: (id) => {
       set((state) => {
-        const assets = state.project?.globalAssets;
-        if (assets && assets.characterSheets) {
-          assets.characterSheets = assets.characterSheets.filter(s => s.id !== id);
-        }
+        if (!state.project || !state.project.globalAssets || !state.project.globalAssets.characterSheets) return;
+        state.project.globalAssets.characterSheets = state.project.globalAssets.characterSheets.filter(s => s.id !== id);
       });
     },
     
     addMoodboard: (board) => {
       set((state) => {
         if (!state.project) return;
-        if (!state.project.globalAssets) state.project.globalAssets = { characterSheets: [], moodboards: [] };
-        if (!state.project.globalAssets.moodboards) state.project.globalAssets.moodboards = [];
+        state.project.globalAssets ??= { characterSheets: [], moodboards: [] };
+        state.project.globalAssets.moodboards ??= [];
         state.project.globalAssets.moodboards.push(board);
       });
     },
 
     updateMoodboard: (id, patch) => {
       set((state) => {
-        const boards = state.project?.globalAssets?.moodboards;
+        if (!state.project) return;
+        const boards = state.project.globalAssets?.moodboards;
         if (boards) {
           const board = boards.find(b => b.id === id);
           if (board) Object.assign(board, patch);
@@ -532,10 +532,8 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
 
     deleteMoodboard: (id) => {
       set((state) => {
-        const assets = state.project?.globalAssets;
-        if (assets && assets.moodboards) {
-          assets.moodboards = assets.moodboards.filter(b => b.id !== id);
-        }
+        if (!state.project || !state.project.globalAssets || !state.project.globalAssets.moodboards) return;
+        state.project.globalAssets.moodboards = state.project.globalAssets.moodboards.filter(b => b.id !== id);
       });
     },
   }))

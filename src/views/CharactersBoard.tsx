@@ -1,4 +1,4 @@
-import { useState, useCallback, memo } from "react";
+import { useState, useCallback, memo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sfMotion } from "@/lib/motion";
 import { useStoryFrameStore } from "@/store";
@@ -207,6 +207,26 @@ const CharacterEditorPanel = memo(function CharacterEditorPanel({
     (s) => s.updateCharacterSheet,
   );
 
+  const [localName, setLocalName] = useState(sheet.name);
+  const [localStyleNotes, setLocalStyleNotes] = useState(sheet.styleNotes);
+
+  useEffect(() => {
+    setLocalName(sheet.name);
+    setLocalStyleNotes(sheet.styleNotes);
+  }, [sheet.id]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localName !== sheet.name || localStyleNotes !== sheet.styleNotes) {
+        updateCharacterSheet(sheet.id, {
+          name: localName,
+          styleNotes: localStyleNotes,
+        });
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [localName, localStyleNotes, sheet.id, sheet.name, sheet.styleNotes, updateCharacterSheet]);
+
   const handleImageSelect = async () => {
     try {
       const selected = await open({
@@ -249,10 +269,8 @@ const CharacterEditorPanel = memo(function CharacterEditorPanel({
           </label>
           <input
             type="text"
-            value={sheet.name}
-            onChange={(e) =>
-              updateCharacterSheet(sheet.id, { name: e.target.value })
-            }
+            value={localName}
+            onChange={(e) => setLocalName(e.target.value)}
             className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 text-sm focus:outline-none focus:border-blue-500 transition-colors"
             placeholder="캐릭터 이름을 입력하세요"
           />
@@ -288,10 +306,8 @@ const CharacterEditorPanel = memo(function CharacterEditorPanel({
             외형 프롬프트 (Style Notes)
           </label>
           <textarea
-            value={sheet.styleNotes}
-            onChange={(e) =>
-              updateCharacterSheet(sheet.id, { styleNotes: e.target.value })
-            }
+            value={localStyleNotes}
+            onChange={(e) => setLocalStyleNotes(e.target.value)}
             className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-3 text-slate-200 text-sm focus:outline-none focus:border-blue-500 transition-colors min-h-[160px] resize-y"
             placeholder="AI 생성 시 주입할 캐릭터 외형, 의상, 특징 프롬프트를 상세히 적어주세요."
           />
