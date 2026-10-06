@@ -1,0 +1,10 @@
+{
+  "id": "P1-02",
+  "status": "in-progress",
+  "touch_list": [
+    "src/views/EditorPage.tsx"
+  ],
+  "acceptance_tests": [
+    "tests/acceptance/ui.spec.ts"
+  ]
+}
