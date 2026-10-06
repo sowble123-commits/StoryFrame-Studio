@@ -5,8 +5,6 @@
   "touch_list": [
     "src/App.tsx",
     "docs/DEVELOPMENT_STATUS_REPORT.md",
-    "scripts/replace_colors.mjs",
-    "scripts/replace_img.mjs",
     "src/components/SafeImage.tsx",
     "project_state.json",
     "src/components/ClipCard.tsx",
