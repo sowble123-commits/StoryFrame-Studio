@@ -8,5 +8,6 @@
   ],
   "acceptance_tests": [
     "tests/acceptance/project.spec.ts"
-  ]
+  ],
+  "max_changed_lines": 500
 }
