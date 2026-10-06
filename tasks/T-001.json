@@ -4,7 +4,8 @@
   "status": "in-progress",
   "touch_list": [
     "src/types/project.ts",
-    "src/store/index.ts"
+    "src/store/index.ts",
+    "vite.config.ts"
   ],
   "acceptance_tests": [
     "tests/acceptance/project.spec.ts"
