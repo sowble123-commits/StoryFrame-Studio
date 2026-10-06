@@ -1,0 +1,13 @@
+{
+  "id": "P4-01",
+  "status": "in-progress",
+  "touch_list": [
+    "src/components/ExportDialog.tsx",
+    "src/components/layout/CollapsibleSidebar.tsx",
+    "src/views/AudioPage.tsx",
+    "src/views/SettingsPage.tsx"
+  ],
+  "acceptance_tests": [
+    "tests/acceptance/ui.spec.ts"
+  ]
+}
