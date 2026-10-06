@@ -5,7 +5,8 @@
   "touch_list": [
     "src/types/project.ts",
     "src/store/index.ts",
-    "vite.config.ts"
+    "vite.config.ts",
+    "tsconfig.node.json"
   ],
   "acceptance_tests": [
     "tests/acceptance/project.spec.ts"
