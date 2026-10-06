@@ -1,0 +1,10 @@
+{
+  "id": "T-002",
+  "status": "in-progress",
+  "touch_list": [
+    "src/store/index.ts"
+  ],
+  "acceptance_tests": [
+    "tests/acceptance/project.spec.ts"
+  ]
+}
