@@ -1,0 +1,10 @@
+{
+  "id": "P2-02",
+  "status": "in-progress",
+  "touch_list": [
+    "src/views/CharactersBoard.tsx"
+  ],
+  "acceptance_tests": [
+    "tests/acceptance/ui.spec.ts"
+  ]
+}
