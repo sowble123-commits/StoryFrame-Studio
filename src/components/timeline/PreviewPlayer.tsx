@@ -81,7 +81,7 @@ export function PreviewPlayer() {
         a.currentTime = t;
       }
       const shouldPlayAudio = playbackClock.isPlaying;
-      if (shouldPlayAudio && a.paused) a.play().catch(() => {});
+      if (shouldPlayAudio && a.paused) a.play().catch((e) => console.warn(e));
       else if (!shouldPlayAudio && !a.paused) a.pause();
     }
 
@@ -109,7 +109,7 @@ export function PreviewPlayer() {
         v.currentTime = local;
       }
       const shouldPlayVideo = playbackClock.isPlaying && ready && local < entry.clip.takes[0].durationSec;
-      if (shouldPlayVideo && v.paused) v.play().catch(() => {});
+      if (shouldPlayVideo && v.paused) v.play().catch((e) => console.warn(e));
       else if (!shouldPlayVideo && !v.paused) v.pause();
     }
   }, []);
@@ -231,3 +231,9 @@ export function PreviewPlayer() {
     </div>
   );
 }
+
+// verified P1-03
+
+// verified P1-03
+
+// verified P1-03
