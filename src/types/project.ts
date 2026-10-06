@@ -107,7 +107,7 @@ export interface CutTimeline {
   transitionOut: string;
 }
 
-export interface Cut {
+export interface Take {
   id: string;
   index: number;
   sectionId: string;
@@ -115,6 +115,24 @@ export interface Cut {
   illustration: CutIllustration;
   video: CutVideo;
   timeline: CutTimeline;
+  variants: unknown[];
+  isHardCut: boolean;
+  F0_reference: string;
+}
+
+// Alias for backward compatibility with untouched UI components
+export type Cut = Take;
+
+export interface Clip {
+  id: string;
+  index: number;
+  takes: Take[];
+}
+
+export interface Sequence {
+  id: string;
+  index: number;
+  clips: Clip[];
 }
 
 export interface RoughCut {
@@ -139,7 +157,8 @@ export interface ProjectState {
   progress: ProjectProgress;
   music: ProjectMusic;
   globalAssets: GlobalAssets;
-  cuts: Cut[];
+  sequences: Sequence[];
+  cuts: Cut[]; // Keep for UI components, sync'd from sequences
   roughCut: RoughCut;
   uiState: UiState;
 }
