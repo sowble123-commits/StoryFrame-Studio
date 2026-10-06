@@ -56,50 +56,49 @@ export function CharactersPage() {
   );
 }
 
-function CharacterCard({ sheet }: { sheet: CharacterSheet }) {
+const CharacterCard = memo(function CharacterCard({ sheet }: { sheet: CharacterSheet }) {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = () => {
+  const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(sheet.styleNotes);
     setCopied(true);
     toast.success('스타일 노트가 복사되었습니다.');
     setTimeout(() => setCopied(false), 2000);
-  };
+  }, [sheet.styleNotes]);
 
   return (
-    <div className="flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-slate-700 transition-colors shadow-sm">
-      <div className="relative aspect-[3/4] bg-slate-800 group">
+    <div className="flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10 transition-all duration-300">
+      <div className="relative aspect-[3/4] bg-slate-800 group overflow-hidden">
         <img
           src={sheet.frontRefPath}
           alt={sheet.name}
-          className="w-full h-full object-cover select-none"
+          className="w-full h-full object-cover select-none group-hover:scale-105 transition-transform duration-500"
           draggable={true}
           onDragStart={(e) => {
-            // Some native drop targets might benefit from this, but img natively supports dragging.
             e.dataTransfer.setData('text/plain', sheet.frontRefPath);
             e.dataTransfer.setData('text/uri-list', sheet.frontRefPath);
           }}
         />
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
       </div>
       
       <div className="p-4 flex flex-col gap-3 flex-1">
-        <h3 className="font-semibold text-slate-200 truncate" title={sheet.name}>
+        <h3 className="font-semibold text-slate-100 truncate" title={sheet.name}>
           {sheet.name}
         </h3>
         
-        <div className="text-xs text-slate-400 bg-slate-950/50 p-2 rounded border border-slate-800/50 flex-1 line-clamp-3" title={sheet.styleNotes}>
+        <div className="text-xs text-slate-400 bg-slate-950/80 p-2.5 rounded-lg border border-slate-800 flex-1 line-clamp-3 leading-relaxed" title={sheet.styleNotes}>
           {sheet.styleNotes || <span className="italic opacity-50">스타일 노트 없음</span>}
         </div>
         
         <button
           onClick={handleCopy}
-          className="flex items-center justify-center gap-1.5 w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-slate-100 rounded text-sm transition-colors mt-auto"
+          className="flex items-center justify-center gap-1.5 w-full py-2 bg-slate-800/50 hover:bg-indigo-600 text-slate-300 hover:text-white rounded-lg text-sm transition-all duration-200 mt-auto group/btn"
         >
           {copied ? (
             <>
-              <Check size={14} className="text-emerald-400" />
-              <span className="text-emerald-400">복사됨</span>
+              <Check size={14} className="text-emerald-400 group-hover/btn:text-white" />
+              <span className="text-emerald-400 group-hover/btn:text-white">복사됨</span>
             </>
           ) : (
             <>
@@ -111,4 +110,4 @@ function CharacterCard({ sheet }: { sheet: CharacterSheet }) {
       </div>
     </div>
   );
-}
+});

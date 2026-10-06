@@ -145,6 +145,7 @@ export function EditorPage() {
     const registerListener = async () => {
       try {
         unlistenFn = await listen('tauri://drag-drop', async (event) => {
+          if (!isMounted) return; // 컴포넌트 언마운트 시 실행 방지
           const payload = event.payload as { paths: string[] };
           if (!payload?.paths || !projectPath) return;
 
@@ -381,7 +382,7 @@ export function EditorPage() {
   );
 }
 
-function ClipCardWrapper({ sequenceId, clipId, viewMode }: { sequenceId: string, clipId: string, viewMode: 'grid' | 'list' }) {
+const ClipCardWrapper = memo(function ClipCardWrapper({ sequenceId, clipId, viewMode }: { sequenceId: string, clipId: string, viewMode: 'grid' | 'list' }) {
   const clip = useStoryFrameStore(useCallback((s) => s.project?.sequences?.find(seq => seq.id === sequenceId)?.clips?.find(c => c.id === clipId), [sequenceId, clipId]));
   const isSelected = useStoryFrameStore(useCallback((s) => s.project?.uiState?.selectedClipId === clipId, [clipId]));
   const setSelectedIds = useStoryFrameStore((s) => s.setSelectedIds);
@@ -397,9 +398,9 @@ function ClipCardWrapper({ sequenceId, clipId, viewMode }: { sequenceId: string,
       onClick={() => setSelectedIds(sequenceId, clipId, null, null)}
     />
   );
-}
+});
 
-function DropPromptModal({
+const DropPromptModal = memo(function DropPromptModal({
   isOpen,
   paths,
   onSubmit,
@@ -452,4 +453,4 @@ function DropPromptModal({
       </div>
     </div>
   );
-}
+});

@@ -115,14 +115,20 @@ export function PreviewPlayer() {
   }, []);
 
   useEffect(() => {
-    let raf = 0;
+    let rafId = 0;
+    let isMounted = true;
+
     const tick = () => {
+      if (!isMounted) return;
       sync(playbackClock.time);
-      raf = requestAnimationFrame(tick);
+      rafId = requestAnimationFrame(tick);
     };
+
     const stopLoop = () => {
-      cancelAnimationFrame(raf);
-      raf = 0;
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
     };
 
     let prevPlaying = useStoryFrameStore.getState().isPlaying;
@@ -131,12 +137,18 @@ export function PreviewPlayer() {
     const apply = () => {
       const s = useStoryFrameStore.getState();
       stopLoop();
-      if (s.isPlaying) raf = requestAnimationFrame(tick);
-      else sync(s.currentTime, true);
+      if (s.isPlaying && isMounted) {
+        rafId = requestAnimationFrame(tick);
+      } else if (!s.isPlaying && isMounted) {
+        sync(s.currentTime, true);
+      }
     };
+    
     apply();
 
     const unsub = useStoryFrameStore.subscribe((s) => {
+      if (!isMounted) return;
+      
       if (s.isPlaying !== prevPlaying) {
         prevPlaying = s.isPlaying;
         prevTime = s.currentTime;
@@ -148,6 +160,7 @@ export function PreviewPlayer() {
     });
 
     return () => {
+      isMounted = false;
       stopLoop();
       unsub();
       videoRef.current?.pause();
