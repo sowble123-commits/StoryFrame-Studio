@@ -1,3 +1,4 @@
+import { SafeImage } from '@/components/SafeImage';
 import { memo, useCallback, useMemo } from 'react';
 import { Image, Video, CheckCircle, Clock, Zap, Gauge, Flame, Copy, Trash2 } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -26,7 +27,7 @@ const MotionBadge = memo(function MotionBadge({ difficulty }: { difficulty: stri
   switch (difficulty) {
     case 'high':   return <span title="High Motion"><Flame size={13} className="text-red-500" /></span>;
     case 'medium': return <span title="Medium Motion"><Zap size={13} className="text-yellow-500" /></span>;
-    case 'low':    return <span title="Low Motion"><Gauge size={13} className="text-blue-500" /></span>;
+    case 'low':    return <span title="Low Motion"><Gauge size={13} className="text-accent" /></span>;
     default:       return null;
   }
 });
@@ -65,13 +66,13 @@ const VersionSlots = memo(function VersionSlots({ cutId, versions }: VersionSlot
             }}
             onPointerDown={(e) => e.stopPropagation()} // DndKit 드래그 시작 방지
             className={clsx(
-              'w-8 h-5 rounded overflow-hidden border transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400',
+              'w-8 h-5 rounded overflow-hidden border transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
               v.isSelected
                 ? 'border-blue-400 ring-1 ring-blue-400'
-                : 'border-slate-700 opacity-60 hover:opacity-100',
+                : 'border-border-subtle opacity-60 hover:opacity-100',
             )}
           >
-            <img src={getAssetUrl(projectPath, v.thumbnailPath)} alt={label} className="w-full h-full object-cover" draggable={false} />
+            <SafeImage src={getAssetUrl(projectPath, v.thumbnailPath)} alt={label} className="w-full h-full object-cover" draggable={false} />
           </button>
         ) : (
           // 썸네일 없으면 점(dot)
@@ -86,10 +87,10 @@ const VersionSlots = memo(function VersionSlots({ cutId, versions }: VersionSlot
             }}
             onPointerDown={(e) => e.stopPropagation()} // DndKit 드래그 시작 방지
             className={clsx(
-              'w-2.5 h-2.5 rounded-sm transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400',
+              'w-2.5 h-2.5 rounded-sm transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
               v.isSelected
-                ? 'bg-blue-500 scale-110'
-                : 'bg-slate-700 hover:bg-slate-500',
+                ? 'bg-accent scale-110'
+                : 'bg-surface-2 hover:bg-slate-500',
             )}
           />
         );
@@ -144,24 +145,23 @@ export const CutCard = memo(function CutCard({ cut, viewMode, isSelected, onClic
           aria-selected={isSelected}
           onKeyDown={(e) => e.key === 'Enter' && onClick?.()}
           className={clsx(
-            'bg-slate-900 border rounded-xl overflow-hidden select-none',
+            'bg-surface-0 border rounded-xl overflow-hidden select-none',
             'cursor-pointer transition-all duration-150',
-            'hover:border-blue-500/50 hover:bg-slate-800',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
-            isSelected ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-800',
+            'hover:border-accent/50 hover:bg-surface-1',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+            isSelected ? 'border-accent ring-1 ring-blue-500' : 'border-border',
             isGrid ? 'flex flex-col h-64' : 'flex flex-row items-center p-4 gap-4',
           )}
         >
           {/* ── 썸네일 ── */}
           <div
             className={clsx(
-              'bg-slate-950 flex items-center justify-center overflow-hidden relative shrink-0',
-              isGrid ? 'h-32 border-b border-slate-800' : 'w-32 h-20 rounded border border-slate-800',
+              'bg-canvas flex items-center justify-center overflow-hidden relative shrink-0',
+              isGrid ? 'h-32 border-b border-border' : 'w-32 h-20 rounded border border-border',
             )}
           >
             {thumbUrl ? (
-              <img
-                src={thumbUrl}
+              <SafeImage                 src={thumbUrl}
                 alt={`컷 ${cut.index} 썸네일`}
                 className="w-full h-full object-cover"
                 draggable={false}
@@ -170,7 +170,7 @@ export const CutCard = memo(function CutCard({ cut, viewMode, isSelected, onClic
               <Image className="text-slate-700" size={28} />
             )}
             {/* 컷 인덱스 배지 */}
-            <div className="absolute top-2 left-2 bg-black/60 px-1.5 py-0.5 rounded text-xs font-mono text-slate-300 leading-none">
+            <div className="absolute top-2 left-2 bg-black/60 px-1.5 py-0.5 rounded text-xs font-mono text-secondary leading-none">
               C{String(cut.index).padStart(3, '0')}
             </div>
             {/* 모션 난이도 배지 */}
@@ -185,13 +185,13 @@ export const CutCard = memo(function CutCard({ cut, viewMode, isSelected, onClic
           <div className={clsx('flex flex-col flex-1 min-w-0', isGrid ? 'p-3 gap-2' : 'gap-1')}>
             <div className="flex justify-between items-start gap-2">
               <h4
-                className="text-slate-200 font-medium text-sm truncate"
+                className="text-primary font-medium text-sm truncate"
                 title={cut.story.description}
               >
                 {cut.story.description || 'No description'}
               </h4>
               {!isGrid && (
-                <span className="text-xs text-slate-500 whitespace-nowrap shrink-0">
+                <span className="text-xs text-tertiary whitespace-nowrap shrink-0">
                   {cut.timeline.effectiveDurationSec}s
                 </span>
               )}
@@ -205,11 +205,11 @@ export const CutCard = memo(function CutCard({ cut, viewMode, isSelected, onClic
             <div className={clsx('flex justify-between items-center mt-auto', isGrid && 'pt-1')}>
               {/* 상태 아이콘 */}
               <div className="flex gap-3">
-                <div className="flex items-center gap-1 text-xs text-slate-500">
+                <div className="flex items-center gap-1 text-xs text-tertiary">
                   <Image size={13} />
                   <StatusIcon status={cut.illustration.status} />
                 </div>
-                <div className="flex items-center gap-1 text-xs text-slate-500">
+                <div className="flex items-center gap-1 text-xs text-tertiary">
                   <Video size={13} />
                   <StatusIcon status={cut.video.status} />
                 </div>
@@ -231,7 +231,7 @@ export const CutCard = memo(function CutCard({ cut, viewMode, isSelected, onClic
       <ContextMenu.Portal>
         <ContextMenu.Content
           className="
-            bg-slate-800 border border-slate-700 rounded-lg p-1
+            bg-surface-1 border border-border-subtle rounded-lg p-1
             min-w-[160px] shadow-2xl z-[100] overflow-hidden
             animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out
             data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95
@@ -241,22 +241,22 @@ export const CutCard = memo(function CutCard({ cut, viewMode, isSelected, onClic
             onSelect={handleDuplicate}
             className="
               flex items-center gap-2 px-3 py-1.5 rounded-md
-              text-sm text-slate-200 cursor-default outline-none
-              data-[highlighted]:bg-slate-700 data-[highlighted]:text-white
+              text-sm text-primary cursor-default outline-none
+              data-[highlighted]:bg-surface-2 data-[highlighted]:text-white
             "
           >
             <Copy size={13} />
             복제
           </ContextMenu.Item>
 
-          <ContextMenu.Separator className="h-px bg-slate-700 my-1" />
+          <ContextMenu.Separator className="h-px bg-surface-2 my-1" />
 
           <ContextMenu.Item
             onSelect={handleDelete}
             className="
               flex items-center gap-2 px-3 py-1.5 rounded-md
-              text-sm text-red-400 cursor-default outline-none
-              data-[highlighted]:bg-red-900/40 data-[highlighted]:text-red-300
+              text-sm text-danger cursor-default outline-none
+              data-[highlighted]:bg-red-900/40 data-[highlighted]:text-danger
             "
           >
             <Trash2 size={13} />

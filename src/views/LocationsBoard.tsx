@@ -30,28 +30,28 @@ export function LocationsPage() {
   const selectedBoard = moodboards.find((b) => b.id === selectedBoardId);
 
   return (
-    <div className="w-full h-full flex bg-slate-950 overflow-hidden">
+    <div className="w-full h-full flex bg-canvas overflow-hidden">
       <motion.div
         {...sfMotion.fade}
         className="flex-1 p-6 flex flex-col gap-6 overflow-y-auto custom-scrollbar"
       >
         <div className="flex items-center justify-between shrink-0">
           <div>
-            <h1 className="text-2xl font-bold text-slate-100">장소 보드</h1>
-            <p className="text-slate-400 mt-1 text-sm">
+            <h1 className="text-2xl font-bold text-primary">장소 보드</h1>
+            <p className="text-secondary mt-1 text-sm">
               작품의 주요 배경과 로케이션, 무드보드를 관리합니다.
             </p>
           </div>
           <button
             onClick={handleAddDummy}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors font-medium text-sm shadow-lg shadow-blue-500/20"
+            className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent text-white rounded-lg transition-colors font-medium text-sm shadow-lg shadow-blue-500/20"
           >
             <Plus size={16} />새 장소
           </button>
         </div>
 
         {moodboards.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-800 rounded-xl p-10 text-slate-500">
+          <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-xl p-10 text-tertiary">
             <p>등록된 장소가 없습니다.</p>
             <p className="text-sm mt-2">
               우측 상단의 버튼을 눌러 장소를 추가해보세요.
@@ -119,13 +119,13 @@ const MoodboardCard = memo(function MoodboardCard({
   return (
     <div
       onClick={onClick}
-      className={`flex flex-col bg-slate-900 border rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer ${
+      className={`flex flex-col bg-surface-0 border rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer ${
         isSelected
-          ? "border-blue-500 shadow-blue-500/10"
-          : "border-slate-800 hover:border-slate-600"
+          ? "border-accent shadow-blue-500/10"
+          : "border-border hover:border-slate-600"
       }`}
     >
-      <div className="relative aspect-[3/2] bg-slate-800/50 group overflow-hidden flex items-center justify-center">
+      <div className="relative aspect-[3/2] bg-surface-1/50 group overflow-hidden flex items-center justify-center">
         {primaryImage ? (
           <img
             src={primaryImage}
@@ -150,16 +150,16 @@ const MoodboardCard = memo(function MoodboardCard({
         )}
       </div>
 
-      <div className="p-4 flex flex-col gap-3 flex-1 relative z-10 bg-slate-900">
+      <div className="p-4 flex flex-col gap-3 flex-1 relative z-10 bg-surface-0">
         <h3
-          className="font-bold text-slate-100 truncate text-lg"
+          className="font-bold text-primary truncate text-lg"
           title={board.label}
         >
           {board.label}
         </h3>
 
         <div
-          className="text-xs text-slate-400 bg-slate-950 p-3 rounded-lg border border-slate-800 flex-1 line-clamp-3 leading-relaxed"
+          className="text-xs text-secondary bg-canvas p-3 rounded-lg border border-border flex-1 line-clamp-3 leading-relaxed"
           title={board.notes}
         >
           {board.notes || (
@@ -171,7 +171,7 @@ const MoodboardCard = memo(function MoodboardCard({
 
         <button
           onClick={handleCopy}
-          className="flex items-center justify-center gap-2 w-full py-2.5 bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white rounded-lg text-sm font-medium transition-colors mt-2"
+          className="flex items-center justify-center gap-2 w-full py-2.5 bg-surface-1 hover:bg-accent text-secondary hover:text-white rounded-lg text-sm font-medium transition-colors mt-2"
         >
           {copied ? (
             <>
@@ -207,7 +207,7 @@ const LocationEditorPanel = memo(function LocationEditorPanel({
   useEffect(() => {
     setLocalLabel(board.label);
     setLocalNotes(board.notes);
-  }, [board.id]);
+  }, [board.id, board.label, board.notes]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -253,13 +253,13 @@ const LocationEditorPanel = memo(function LocationEditorPanel({
       initial={{ width: 0, opacity: 0 }}
       animate={{ width: 380, opacity: 1 }}
       exit={{ width: 0, opacity: 0 }}
-      className="border-l border-slate-800 bg-slate-900 flex flex-col shrink-0"
+      className="border-l border-border bg-surface-0 flex flex-col shrink-0"
     >
-      <div className="h-14 border-b border-slate-800 flex items-center justify-between px-4 shrink-0">
-        <h3 className="font-bold text-slate-200">장소 설정</h3>
+      <div className="h-14 border-b border-border flex items-center justify-between px-4 shrink-0">
+        <h3 className="font-bold text-primary">장소 설정</h3>
         <button
           onClick={onClose}
-          className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
+          className="p-1.5 text-secondary hover:text-white hover:bg-surface-1 rounded-md transition-colors"
         >
           <X size={18} />
         </button>
@@ -267,22 +267,22 @@ const LocationEditorPanel = memo(function LocationEditorPanel({
 
       <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-6 custom-scrollbar">
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <label className="text-xs font-semibold text-secondary uppercase tracking-wider">
             장소 이름
           </label>
           <input
             type="text"
             value={localLabel}
             onChange={(e) => setLocalLabel(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+            className="bg-canvas border border-border rounded-lg px-3 py-2 text-primary text-sm focus:outline-none focus:border-accent transition-colors"
             placeholder="장소 이름을 입력하세요"
           />
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex justify-between">
+          <label className="text-xs font-semibold text-secondary uppercase tracking-wider flex justify-between">
             <span>무드보드 이미지</span>
-            <span className="text-slate-500">
+            <span className="text-tertiary">
               {(board.imagePaths || []).length}장
             </span>
           </label>
@@ -290,12 +290,12 @@ const LocationEditorPanel = memo(function LocationEditorPanel({
             {(board.imagePaths || []).map((path, idx) => (
               <div
                 key={idx}
-                className="relative aspect-video rounded-lg overflow-hidden border border-slate-800 group"
+                className="relative aspect-video rounded-lg overflow-hidden border border-border group"
               >
                 <img src={path} className="w-full h-full object-cover" alt="" />
                 <button
                   onClick={() => removeImage(idx)}
-                  className="absolute top-1 right-1 p-1 bg-black/60 rounded text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-1 right-1 p-1 bg-black/60 rounded text-secondary hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <X size={14} />
                 </button>
@@ -303,7 +303,7 @@ const LocationEditorPanel = memo(function LocationEditorPanel({
             ))}
             <button
               onClick={handleImageSelect}
-              className="aspect-video rounded-lg border-2 border-dashed border-slate-700 bg-slate-950/50 hover:bg-slate-800 hover:border-slate-500 transition-colors flex items-center justify-center text-slate-500 hover:text-slate-300"
+              className="aspect-video rounded-lg border-2 border-dashed border-border-subtle bg-canvas/50 hover:bg-surface-1 hover:border-slate-500 transition-colors flex items-center justify-center text-tertiary hover:text-secondary"
             >
               <Plus size={20} />
             </button>
@@ -311,26 +311,26 @@ const LocationEditorPanel = memo(function LocationEditorPanel({
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <label className="text-xs font-semibold text-secondary uppercase tracking-wider">
             배경 프롬프트 (Atmosphere)
           </label>
           <textarea
             value={localNotes}
             onChange={(e) => setLocalNotes(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-3 text-slate-200 text-sm focus:outline-none focus:border-blue-500 transition-colors min-h-[160px] resize-y"
+            className="bg-canvas border border-border rounded-lg px-3 py-3 text-primary text-sm focus:outline-none focus:border-accent transition-colors min-h-[160px] resize-y"
             placeholder="조명, 시간대, 날씨, 분위기 등 씬에 일관되게 주입할 프롬프트를 적어주세요."
           />
         </div>
       </div>
 
-      <div className="p-4 border-t border-slate-800 shrink-0">
+      <div className="p-4 border-t border-border shrink-0">
         <button
           onClick={() => {
             if (confirm("이 장소를 정말 삭제하시겠습니까?")) {
               onDelete();
             }
           }}
-          className="flex items-center justify-center gap-2 w-full py-2.5 text-red-400 hover:text-white hover:bg-red-600/80 rounded-lg text-sm font-medium transition-colors"
+          className="flex items-center justify-center gap-2 w-full py-2.5 text-danger hover:text-white hover:bg-danger/80 rounded-lg text-sm font-medium transition-colors"
         >
           <Trash2 size={16} />
           <span>장소 삭제</span>

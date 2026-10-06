@@ -15,7 +15,7 @@ export function useAutoSave() {
     
     const debouncedSave = debounce(() => {
       saveProjectRef.current(project.projectPath!);
-      console.log('Auto-saved project to', project.projectPath);
+      
     }, 500);
 
     debouncedSave();

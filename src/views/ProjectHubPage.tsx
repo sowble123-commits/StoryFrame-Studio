@@ -35,19 +35,19 @@ export function ProjectHubPage() {
   };
 
   return (
-    <div className="flex flex-col items-center p-8 h-full bg-slate-950 overflow-y-auto w-full custom-scrollbar">
+    <div className="flex flex-col items-center p-8 h-full bg-canvas overflow-y-auto w-full custom-scrollbar">
       <div className="max-w-4xl w-full flex flex-col gap-8">
-        <div className="flex justify-between items-end border-b border-slate-800 pb-4">
+        <div className="flex justify-between items-end border-b border-border pb-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-100">StoryFrame Studio</h1>
-            <p className="text-slate-400 mt-2">애니메이션 프로젝트 관리</p>
+            <h1 className="text-3xl font-bold text-primary">StoryFrame Studio</h1>
+            <p className="text-secondary mt-2">애니메이션 프로젝트 관리</p>
           </div>
           <div className="flex gap-4">
             <motion.button
               {...sfMotion.hover}
               {...sfMotion.tap}
               onClick={() => setIsCreating(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+              className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent text-white rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               disabled={isLoading}
             >
               <Plus size={18} />
@@ -57,7 +57,7 @@ export function ProjectHubPage() {
               {...sfMotion.hover}
               {...sfMotion.tap}
               onClick={() => loadProject()}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+              className="flex items-center gap-2 px-4 py-2 bg-surface-1 hover:bg-surface-2 text-primary rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               disabled={isLoading}
             >
               <FolderOpen size={18} />
@@ -70,9 +70,9 @@ export function ProjectHubPage() {
           {isCreating && (
             <motion.div 
               {...sfMotion.transition}
-              className="bg-slate-900 border border-blue-900/50 p-6 rounded-lg flex flex-col gap-4 overflow-hidden"
+              className="bg-surface-0 border border-blue-900/50 p-6 rounded-lg flex flex-col gap-4 overflow-hidden"
             >
-              <h2 className="text-xl font-semibold text-slate-200">새 프로젝트 생성</h2>
+              <h2 className="text-xl font-semibold text-primary">새 프로젝트 생성</h2>
               <div className="flex gap-4">
                 <input 
                   type="text" 
@@ -81,18 +81,18 @@ export function ProjectHubPage() {
                   value={newProjectName}
                   onChange={(e) => setNewProjectName(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-                  className="flex-1 bg-slate-950 border border-slate-800 rounded px-4 py-2 text-slate-200 focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500"
+                  className="flex-1 bg-canvas border border-border rounded px-4 py-2 text-primary focus:outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent"
                 />
                 <button 
                   onClick={handleCreate}
                   disabled={!newProjectName.trim() || isLoading}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                  className="px-4 py-2 bg-accent hover:bg-accent disabled:opacity-50 text-white rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   생성 및 폴더 선택
                 </button>
                 <button 
                   onClick={() => setIsCreating(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                  className="px-4 py-2 bg-surface-1 hover:bg-surface-2 text-secondary rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                 >
                   취소
                 </button>
@@ -102,9 +102,9 @@ export function ProjectHubPage() {
         </AnimatePresence>
 
         <div>
-          <h2 className="text-xl font-semibold text-slate-300 mb-4">최근 프로젝트</h2>
+          <h2 className="text-xl font-semibold text-secondary mb-4">최근 프로젝트</h2>
           {recentProjects.length === 0 ? (
-            <div className="text-slate-500 italic p-8 text-center bg-slate-900/50 rounded-lg border border-slate-800 border-dashed">
+            <div className="text-tertiary italic p-8 text-center bg-surface-0/50 rounded-lg border border-border border-dashed">
               최근 프로젝트가 없습니다. 새 프로젝트를 생성하거나 열어주세요.
             </div>
           ) : (

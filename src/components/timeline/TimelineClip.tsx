@@ -1,3 +1,4 @@
+import { SafeImage } from '@/components/SafeImage';
 import React, { memo, useCallback, useRef } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -25,10 +26,8 @@ export const TimelineClip = memo(function TimelineClip({ id, pixelsPerSecond }: 
   const switchVideoVersion = useStoryFrameStore((s) => s.switchVideoVersion);
   const isSelected = useStoryFrameStore((s) => s.project?.uiState?.selectedCutId === id);
 
-  if (!cut) return null;
-
-  const activeVersion = cut.video.versions?.find((v) => v.isSelected) ?? cut.video.versions?.[0];
-  const thumbnail = activeVersion?.thumbnailPath || cut.illustration.primaryImagePath;
+  const activeVersion = cut?.video.versions?.find((v) => v.isSelected) ?? cut?.video.versions?.[0];
+  const thumbnail = activeVersion?.thumbnailPath || cut?.illustration.primaryImagePath;
 
   // 최신 값을 pointer 핸들러 클로저 없이 읽기 위한 ref
   const latest = useRef({ cut, pps: pixelsPerSecond, sourceDuration: activeVersion?.durationSec ?? 0 });
@@ -50,7 +49,7 @@ export const TimelineClip = memo(function TimelineClip({ id, pixelsPerSecond }: 
       const target = e.currentTarget;
       target.setPointerCapture(e.pointerId);
 
-      const { cut: c0 } = latest.current;
+      const { cut: c0 } = latest.current; if (!c0) return;
       const startX = e.clientX;
       const startValue = edge === 'in' ? c0.timeline.inPointSec : c0.timeline.outPointSec;
       // 드래그 시작 시점에 한 번만 정렬 스냅샷 (읽기 전용 getState → 구독/리렌더 없음)
@@ -75,10 +74,10 @@ export const TimelineClip = memo(function TimelineClip({ id, pixelsPerSecond }: 
         t = snapToBeat(beats, t, 0.05);
 
         if (edge === 'in') {
-          t = clamp(t, 0, cur.timeline.outPointSec - MIN_CLIP_SEC);
+          t = clamp(t, 0, cur!.timeline.outPointSec - MIN_CLIP_SEC);
         } else {
           const max = sourceDuration > 0 ? sourceDuration : Number.POSITIVE_INFINITY;
-          t = clamp(t, cur.timeline.inPointSec + MIN_CLIP_SEC, max);
+          t = clamp(t, cur!.timeline.inPointSec + MIN_CLIP_SEC, max);
         }
         pending = t;
         if (!raf) raf = requestAnimationFrame(commit);
@@ -105,9 +104,13 @@ export const TimelineClip = memo(function TimelineClip({ id, pixelsPerSecond }: 
   const style: React.CSSProperties = {
     transform: CSS.Translate.toString(transform), // Translate: scale 왜곡 없음
     transition,
-    width: cut.timeline.effectiveDurationSec * pixelsPerSecond,
+    width: (cut?.timeline.effectiveDurationSec ?? 0) * pixelsPerSecond,
     flexShrink: 0,
   };
+
+  
+
+  if (!cut) return null;
 
   return (
     <div
@@ -115,15 +118,14 @@ export const TimelineClip = memo(function TimelineClip({ id, pixelsPerSecond }: 
       style={style}
       data-no-seek
       className={clsx(
-        'relative h-20 bg-slate-800 border-y border-r border-slate-700 flex flex-col overflow-visible group',
+        'relative h-20 bg-surface-1 border-y border-r border-border-subtle flex flex-col overflow-visible group',
         isDragging && 'z-50 opacity-60 shadow-2xl',
         isSelected && 'ring-2 ring-blue-500 z-10',
       )}
       onClick={() => setSelectedCutId(cut.id)}
     >
       {thumbnail && (
-        <img
-          src={thumbnail}
+        <SafeImage           src={thumbnail}
           alt=""
           className="absolute inset-0 w-full h-full object-cover opacity-40 pointer-events-none"
           draggable={false}
@@ -132,28 +134,28 @@ export const TimelineClip = memo(function TimelineClip({ id, pixelsPerSecond }: 
 
       {/* 드래그(순서 변경) 영역: 헤더에만 listeners 부착 */}
       <div
-        className="relative z-10 px-2 py-1 bg-black/50 text-xs font-mono text-slate-300 flex items-center justify-between cursor-grab active:cursor-grabbing touch-none"
+        className="relative z-10 px-2 py-1 bg-black/50 text-xs font-mono text-secondary flex items-center justify-between cursor-grab active:cursor-grabbing touch-none"
         {...attributes}
         {...listeners}
       >
         <div className="flex items-center gap-1">
-          <GripVertical size={12} className="text-slate-500" />
+          <GripVertical size={12} className="text-tertiary" />
           <span>C{String(cut.index).padStart(3, '0')}</span>
         </div>
         <span className="opacity-70">{cut.timeline.effectiveDurationSec.toFixed(1)}s</span>
       </div>
 
-      {cut.video.versions && cut.video.versions.length > 1 && (
+      {cut?.video.versions && cut?.video.versions.length > 1 && (
         <select
           data-no-dnd
-          className="relative z-10 mx-2 mt-1 text-[10px] bg-slate-900 border border-slate-700 rounded p-0.5 text-slate-300"
+          className="relative z-10 mx-2 mt-1 text-[10px] bg-surface-0 border border-border-subtle rounded p-0.5 text-secondary"
           value={activeVersion?.versionId}
           onChange={(e) => switchVideoVersion(cut.id, e.target.value)}
           onClick={stop}
           onPointerDown={stop}
           aria-label="비디오 버전"
         >
-          {cut.video.versions.map((v, i) => (
+          {cut?.video.versions.map((v, i) => (
             <option key={v.versionId} value={v.versionId}>v{i + 1}</option>
           ))}
         </select>
@@ -164,7 +166,7 @@ export const TimelineClip = memo(function TimelineClip({ id, pixelsPerSecond }: 
         data-no-dnd
         role="separator"
         aria-label="In 포인트 트리밍"
-        className="absolute top-0 bottom-0 left-0 w-2 cursor-col-resize hover:bg-blue-500/50 z-20 touch-none transition-colors"
+        className="absolute top-0 bottom-0 left-0 w-2 cursor-col-resize hover:bg-accent/50 z-20 touch-none transition-colors"
         onPointerDown={startTrim('in')}
         onClick={stop}
       />
@@ -172,7 +174,7 @@ export const TimelineClip = memo(function TimelineClip({ id, pixelsPerSecond }: 
         data-no-dnd
         role="separator"
         aria-label="Out 포인트 트리밍"
-        className="absolute top-0 bottom-0 right-0 w-2 cursor-col-resize hover:bg-blue-500/50 z-20 touch-none transition-colors"
+        className="absolute top-0 bottom-0 right-0 w-2 cursor-col-resize hover:bg-accent/50 z-20 touch-none transition-colors"
         onPointerDown={startTrim('out')}
         onClick={stop}
       />

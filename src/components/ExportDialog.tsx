@@ -35,13 +35,13 @@ class ExportErrorBoundary extends React.Component<
   render() {
     if (!this.state.error) return this.props.children;
     return (
-      <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50">
-        <div className="bg-slate-900 border border-slate-800 p-6 rounded-lg w-96 text-slate-200 shadow-xl">
+      <div className="fixed inset-0 bg-canvas/80 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="bg-surface-0 border border-border p-6 rounded-lg w-96 text-primary shadow-xl">
           <h2 className="text-lg font-bold mb-2 text-red-500">Export dialog crashed</h2>
-          <pre className="text-xs bg-red-950/50 border border-red-900 rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap">
+          <pre className="text-xs bg-danger/20/50 border border-danger/50 rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap">
             {this.state.error.message}
           </pre>
-          <button className="mt-4 px-4 py-2 border border-slate-700 rounded hover:bg-slate-800 transition-colors" onClick={this.props.onClose}>
+          <button className="mt-4 px-4 py-2 border border-border-subtle rounded hover:bg-surface-1 transition-colors" onClick={this.props.onClose}>
             Close
           </button>
         </div>
@@ -132,12 +132,12 @@ const ExportDialogInner: React.FC<ExportDialogProps> = ({ isOpen, onClose, clips
         <motion.div 
           key="overlay"
           {...sfMotion.fade}
-          className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50"
+          className="fixed inset-0 bg-canvas/80 backdrop-blur-sm flex items-center justify-center z-50"
         >
           <motion.div 
             key="dialog"
             {...sfMotion.modal}
-            className="bg-slate-900 border border-slate-800 p-6 rounded-lg w-96 text-slate-200 shadow-xl" 
+            className="bg-surface-0 border border-border p-6 rounded-lg w-96 text-primary shadow-xl" 
             role="dialog" 
             aria-modal="true"
           >
@@ -148,7 +148,7 @@ const ExportDialogInner: React.FC<ExportDialogProps> = ({ isOpen, onClose, clips
             <label
               key={type}
               className={`flex items-center gap-2 px-3 py-2 border rounded cursor-pointer transition-colors ${
-                exportType === type ? 'border-blue-600 bg-blue-50/10' : 'hover:bg-slate-800 border-slate-700'
+                exportType === type ? 'border-accent bg-blue-50/10' : 'hover:bg-surface-1 border-border-subtle'
               } ${isExporting ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
               <input
@@ -167,14 +167,14 @@ const ExportDialogInner: React.FC<ExportDialogProps> = ({ isOpen, onClose, clips
         {isExporting && (
           <div className="mb-4">
             <div
-              className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden"
+              className="w-full bg-surface-1 rounded-full h-2.5 overflow-hidden"
               role="progressbar"
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={Math.round(progress)}
             >
               <div
-                className="bg-blue-600 h-2.5 rounded-full transition-[width] duration-500 ease-out"
+                className="bg-accent h-2.5 rounded-full transition-[width] duration-500 ease-out"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -185,11 +185,11 @@ const ExportDialogInner: React.FC<ExportDialogProps> = ({ isOpen, onClose, clips
         {errorMessage && (
           <div className="mb-4" role="alert">
             <p className="text-sm font-semibold text-red-500 mb-1">내보내기에 실패했습니다</p>
-            <pre className="text-xs bg-red-950/50 border border-red-900 text-red-200 rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap break-all">
+            <pre className="text-xs bg-danger/20/50 border border-danger/50 text-red-200 rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap break-all">
               {errorMessage}
             </pre>
             <button
-              className="text-xs underline mt-1 text-slate-400 hover:text-white"
+              className="text-xs underline mt-1 text-secondary hover:text-white"
               onClick={() => navigator.clipboard.writeText(errorMessage)}
             >
               오류 복사
@@ -199,14 +199,14 @@ const ExportDialogInner: React.FC<ExportDialogProps> = ({ isOpen, onClose, clips
 
         <div className="flex justify-end gap-2 mt-4">
           <button
-            className="px-4 py-2 border border-slate-700 rounded hover:bg-slate-800 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 border border-border-subtle rounded hover:bg-surface-1 disabled:opacity-50 transition-colors"
             onClick={handleClose}
             disabled={isExporting}
           >
             취소
           </button>
           <button
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 bg-accent text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
             onClick={handleExport}
             disabled={isExporting || clips.length === 0}
           >

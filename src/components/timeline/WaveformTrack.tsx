@@ -163,17 +163,17 @@ export const WaveformTrack = memo(function WaveformTrack({ pixelsPerSecond }: { 
   return (
     <div
       ref={wrapRef}
-      className="relative h-16 border-b border-slate-800 bg-slate-900/50"
+      className="relative h-16 border-b border-border bg-surface-0/50"
       aria-busy={status === 'loading'}
     >
       <canvas ref={canvasRef} className="absolute top-0 left-0 pointer-events-none" aria-hidden="true" />
       {status === 'loading' && (
-        <div className="absolute inset-0 flex items-center pl-3 text-xs text-slate-500 pointer-events-none">
+        <div className="absolute inset-0 flex items-center pl-3 text-xs text-tertiary pointer-events-none">
           파형 분석 중…
         </div>
       )}
       {status === 'error' && (
-        <div className="absolute inset-0 flex items-center pl-3 text-xs text-red-400/80 pointer-events-none" role="status">
+        <div className="absolute inset-0 flex items-center pl-3 text-xs text-danger/80 pointer-events-none" role="status">
           파형을 불러오지 못했습니다
         </div>
       )}

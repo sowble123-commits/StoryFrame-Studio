@@ -24,15 +24,15 @@ export function CollapsibleSidebar() {
       initial={false}
       animate={{ width: isCollapsed ? 48 : 280 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="h-full bg-slate-900 border-r border-slate-800 flex flex-col overflow-hidden shrink-0 z-10"
+      className="h-full bg-surface-0 border-r border-border flex flex-col overflow-hidden shrink-0 z-10"
     >
-      <div className="p-2 flex justify-between items-center border-b border-slate-800 h-12 shrink-0">
-        {!isCollapsed && <span className="font-semibold text-slate-200 px-2 whitespace-nowrap">프로젝트 정보</span>}
+      <div className="p-2 flex justify-between items-center border-b border-border h-12 shrink-0">
+        {!isCollapsed && <span className="font-semibold text-primary px-2 whitespace-nowrap">프로젝트 정보</span>}
         <button
           onClick={toggleSidebar}
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           className={cn(
-            "p-1.5 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+            "p-1.5 hover:bg-surface-1 rounded text-secondary hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
             isCollapsed && "mx-auto"
           )}
         >
@@ -73,9 +73,9 @@ const SidebarItem = memo(function SidebarItem({
       aria-label={label}
       title={isCollapsed ? label : undefined}
       className={cn(
-        "flex items-center p-2 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary w-full",
+        "flex items-center p-2 rounded hover:bg-surface-1 text-secondary hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary w-full",
         isCollapsed ? "justify-center" : "gap-3",
-        isActive && "bg-slate-800 text-white"
+        isActive && "bg-surface-1 text-white"
       )}
     >
       <div className="flex-shrink-0">{icon}</div>

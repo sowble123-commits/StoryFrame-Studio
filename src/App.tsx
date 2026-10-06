@@ -22,7 +22,7 @@ function App() {
 
   return (
     <>
-      <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-950 text-slate-200">
+      <div className="flex flex-col h-screen w-screen overflow-hidden bg-canvas text-primary">
         <TitleBar />
         <ErrorBoundary key={resetKey} onReset={handleReset}>
           <AppShell>

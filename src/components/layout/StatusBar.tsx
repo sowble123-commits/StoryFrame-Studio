@@ -7,7 +7,7 @@ import { listen } from '@tauri-apps/api/event';
 export function StatusBar() {
   const title = useStoryFrameStore((state) => state.project?.meta.title);
   const progress = useStoryFrameStore(useShallow((state) => state.project?.progress));
-  const timelineVisible = useStoryFrameStore((state) => (state.project?.uiState as any)?.timelineVisible);
+  const timelineVisible = useStoryFrameStore((state) => state.project?.uiState?.timelineVisible);
   const toggleTimeline = useStoryFrameStore((state) => state.toggleTimeline);
   
   const [renderProgress, setRenderProgress] = useState<number | null>(null);
@@ -31,7 +31,7 @@ export function StatusBar() {
   }, []);
   
   return (
-    <div className="h-8 bg-slate-900 border-t border-slate-800 flex items-center justify-between px-4 shrink-0 text-xs text-slate-400 select-none">
+    <div className="h-8 bg-surface-0 border-t border-border flex items-center justify-between px-4 shrink-0 text-xs text-secondary select-none">
       <div className="flex items-center gap-4">
         <span>{title ? title : '프로젝트 없음'}</span>
         {progress && (
@@ -50,7 +50,7 @@ export function StatusBar() {
         {title && (
           <button
             onClick={() => toggleTimeline()}
-            className="hover:text-slate-200 hover:bg-slate-800 p-1 rounded transition-colors focus:outline-none flex items-center justify-center text-slate-400"
+            className="hover:text-primary hover:bg-surface-1 p-1 rounded transition-colors focus:outline-none flex items-center justify-center text-secondary"
             title="타임라인 토글"
             aria-label="타임라인 토글"
           >

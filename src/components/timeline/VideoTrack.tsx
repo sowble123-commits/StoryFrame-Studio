@@ -36,7 +36,6 @@ class TrimSafePointerSensor extends PointerSensor {
 
 const restrictToHorizontalAxis: Modifier = ({ transform }) => ({ ...transform, y: 0 });
 
-import { useShallow } from 'zustand/react/shallow';
 
 const OVERSCAN_PX = 600;
 
@@ -52,10 +51,9 @@ function findScrollParent(el: HTMLElement | null): HTMLElement | null {
 }
 
 export function VideoTrack({ pixelsPerSecond }: { pixelsPerSecond: number }) {
-  const ids = useStoryFrameStore(useShallow((s) => s.project?.cuts?.map((c) => c.id) ?? []));
-  const durations = useStoryFrameStore(
-    useShallow((s) => s.project?.cuts?.map((c) => c.timeline.effectiveDurationSec) ?? []),
-  );
+  const cuts = useStoryFrameStore((s) => s.project?.cuts);
+  const ids = useMemo(() => cuts?.map((c) => c.id) ?? [], [cuts]);
+  const durations = useMemo(() => cuts?.map((c) => c.timeline.effectiveDurationSec) ?? [], [cuts]);
   const moveCut = useStoryFrameStore((s) => s.moveCut);
 
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -160,7 +158,7 @@ export function VideoTrack({ pixelsPerSecond }: { pixelsPerSecond: number }) {
   );
 
   return (
-    <div ref={wrapRef} className="relative h-24 border-b border-slate-800 bg-slate-900 flex items-center">
+    <div ref={wrapRef} className="relative h-24 border-b border-border bg-surface-0 flex items-center">
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}

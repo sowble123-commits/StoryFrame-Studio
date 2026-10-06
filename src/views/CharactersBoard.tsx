@@ -35,29 +35,29 @@ export function CharactersPage() {
   const selectedChar = characterSheets.find((c) => c.id === selectedCharId);
 
   return (
-    <div className="w-full h-full flex bg-slate-950 overflow-hidden">
+    <div className="w-full h-full flex bg-canvas overflow-hidden">
       <motion.div
         {...sfMotion.fade}
         className="flex-1 p-6 flex flex-col gap-6 overflow-y-auto custom-scrollbar"
       >
         <div className="flex items-center justify-between shrink-0">
           <div>
-            <h1 className="text-2xl font-bold text-slate-100">캐릭터 보드</h1>
-            <p className="text-slate-400 mt-1 text-sm">
+            <h1 className="text-2xl font-bold text-primary">캐릭터 보드</h1>
+            <p className="text-secondary mt-1 text-sm">
               작품에 등장하는 캐릭터들의 메타데이터와 레퍼런스를 통합
               관리합니다.
             </p>
           </div>
           <button
             onClick={handleAddDummy}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors font-medium text-sm shadow-lg shadow-blue-500/20"
+            className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent text-white rounded-lg transition-colors font-medium text-sm shadow-lg shadow-blue-500/20"
           >
             <Plus size={16} />새 캐릭터
           </button>
         </div>
 
         {characterSheets.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-800 rounded-xl p-10 text-slate-500">
+          <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-xl p-10 text-tertiary">
             <p>등록된 캐릭터가 없습니다.</p>
             <p className="text-sm mt-2">
               우측 상단의 버튼을 눌러 캐릭터를 추가해보세요.
@@ -123,13 +123,13 @@ const CharacterCard = memo(function CharacterCard({
   return (
     <div
       onClick={onClick}
-      className={`flex flex-col bg-slate-900 border rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer ${
+      className={`flex flex-col bg-surface-0 border rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer ${
         isSelected
-          ? "border-blue-500 shadow-blue-500/10"
-          : "border-slate-800 hover:border-slate-600"
+          ? "border-accent shadow-blue-500/10"
+          : "border-border hover:border-slate-600"
       }`}
     >
-      <div className="relative aspect-[3/4] bg-slate-800/50 group overflow-hidden flex items-center justify-center">
+      <div className="relative aspect-[3/4] bg-surface-1/50 group overflow-hidden flex items-center justify-center">
         {sheet.frontRefPath ? (
           <img
             src={sheet.frontRefPath}
@@ -154,16 +154,16 @@ const CharacterCard = memo(function CharacterCard({
         )}
       </div>
 
-      <div className="p-4 flex flex-col gap-3 flex-1 relative z-10 bg-slate-900">
+      <div className="p-4 flex flex-col gap-3 flex-1 relative z-10 bg-surface-0">
         <h3
-          className="font-bold text-slate-100 truncate text-lg"
+          className="font-bold text-primary truncate text-lg"
           title={sheet.name}
         >
           {sheet.name}
         </h3>
 
         <div
-          className="text-xs text-slate-400 bg-slate-950 p-3 rounded-lg border border-slate-800 flex-1 line-clamp-3 leading-relaxed"
+          className="text-xs text-secondary bg-canvas p-3 rounded-lg border border-border flex-1 line-clamp-3 leading-relaxed"
           title={sheet.styleNotes}
         >
           {sheet.styleNotes || (
@@ -175,7 +175,7 @@ const CharacterCard = memo(function CharacterCard({
 
         <button
           onClick={handleCopy}
-          className="flex items-center justify-center gap-2 w-full py-2.5 bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white rounded-lg text-sm font-medium transition-colors mt-2"
+          className="flex items-center justify-center gap-2 w-full py-2.5 bg-surface-1 hover:bg-accent text-secondary hover:text-white rounded-lg text-sm font-medium transition-colors mt-2"
         >
           {copied ? (
             <>
@@ -213,7 +213,7 @@ const CharacterEditorPanel = memo(function CharacterEditorPanel({
   useEffect(() => {
     setLocalName(sheet.name);
     setLocalStyleNotes(sheet.styleNotes);
-  }, [sheet.id]);
+  }, [sheet.id, sheet.name, sheet.styleNotes]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -250,13 +250,13 @@ const CharacterEditorPanel = memo(function CharacterEditorPanel({
       initial={{ width: 0, opacity: 0 }}
       animate={{ width: 380, opacity: 1 }}
       exit={{ width: 0, opacity: 0 }}
-      className="border-l border-slate-800 bg-slate-900 flex flex-col shrink-0"
+      className="border-l border-border bg-surface-0 flex flex-col shrink-0"
     >
-      <div className="h-14 border-b border-slate-800 flex items-center justify-between px-4 shrink-0">
-        <h3 className="font-bold text-slate-200">캐릭터 설정</h3>
+      <div className="h-14 border-b border-border flex items-center justify-between px-4 shrink-0">
+        <h3 className="font-bold text-primary">캐릭터 설정</h3>
         <button
           onClick={onClose}
-          className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
+          className="p-1.5 text-secondary hover:text-white hover:bg-surface-1 rounded-md transition-colors"
         >
           <X size={18} />
         </button>
@@ -264,25 +264,25 @@ const CharacterEditorPanel = memo(function CharacterEditorPanel({
 
       <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-6 custom-scrollbar">
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <label className="text-xs font-semibold text-secondary uppercase tracking-wider">
             캐릭터 이름
           </label>
           <input
             type="text"
             value={localName}
             onChange={(e) => setLocalName(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+            className="bg-canvas border border-border rounded-lg px-3 py-2 text-primary text-sm focus:outline-none focus:border-accent transition-colors"
             placeholder="캐릭터 이름을 입력하세요"
           />
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <label className="text-xs font-semibold text-secondary uppercase tracking-wider">
             대표 이미지 (메인 레퍼런스)
           </label>
           <div
             onClick={handleImageSelect}
-            className="aspect-square rounded-xl border-2 border-dashed border-slate-700 bg-slate-950/50 hover:bg-slate-800 hover:border-slate-500 transition-colors cursor-pointer flex flex-col items-center justify-center overflow-hidden group"
+            className="aspect-square rounded-xl border-2 border-dashed border-border-subtle bg-canvas/50 hover:bg-surface-1 hover:border-slate-500 transition-colors cursor-pointer flex flex-col items-center justify-center overflow-hidden group"
           >
             {sheet.frontRefPath ? (
               <img
@@ -291,7 +291,7 @@ const CharacterEditorPanel = memo(function CharacterEditorPanel({
                 alt=""
               />
             ) : (
-              <div className="flex flex-col items-center gap-2 text-slate-500 group-hover:text-slate-300">
+              <div className="flex flex-col items-center gap-2 text-tertiary group-hover:text-secondary">
                 <ImageIcon size={32} />
                 <span className="text-xs font-medium">
                   클릭하여 이미지 선택
@@ -302,26 +302,26 @@ const CharacterEditorPanel = memo(function CharacterEditorPanel({
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <label className="text-xs font-semibold text-secondary uppercase tracking-wider">
             외형 프롬프트 (Style Notes)
           </label>
           <textarea
             value={localStyleNotes}
             onChange={(e) => setLocalStyleNotes(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-3 text-slate-200 text-sm focus:outline-none focus:border-blue-500 transition-colors min-h-[160px] resize-y"
+            className="bg-canvas border border-border rounded-lg px-3 py-3 text-primary text-sm focus:outline-none focus:border-accent transition-colors min-h-[160px] resize-y"
             placeholder="AI 생성 시 주입할 캐릭터 외형, 의상, 특징 프롬프트를 상세히 적어주세요."
           />
         </div>
       </div>
 
-      <div className="p-4 border-t border-slate-800 shrink-0">
+      <div className="p-4 border-t border-border shrink-0">
         <button
           onClick={() => {
             if (confirm("이 캐릭터를 정말 삭제하시겠습니까?")) {
               onDelete();
             }
           }}
-          className="flex items-center justify-center gap-2 w-full py-2.5 text-red-400 hover:text-white hover:bg-red-600/80 rounded-lg text-sm font-medium transition-colors"
+          className="flex items-center justify-center gap-2 w-full py-2.5 text-danger hover:text-white hover:bg-danger/80 rounded-lg text-sm font-medium transition-colors"
         >
           <Trash2 size={16} />
           <span>캐릭터 삭제</span>

@@ -1,3 +1,4 @@
+import { SafeImage } from '@/components/SafeImage';
 import { memo, useState, useCallback, useMemo } from 'react';
 import { Eye, EyeOff, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -61,24 +62,23 @@ export const ClipCard = memo(function ClipCard({ sequenceId, clip, viewMode, isS
           aria-selected={isSelected}
           onKeyDown={(e) => e.key === 'Enter' && onClick?.()}
           className={clsx(
-            'bg-slate-900 border rounded-xl overflow-hidden select-none relative',
+            'bg-surface-0 border rounded-xl overflow-hidden select-none relative',
             'cursor-pointer transition-all duration-150',
-            'hover:border-blue-500/50 hover:bg-slate-800',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
-            isSelected ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-800',
+            'hover:border-accent/50 hover:bg-surface-1',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+            isSelected ? 'border-accent ring-1 ring-blue-500' : 'border-border',
             isGrid ? 'flex flex-col h-auto min-h-[16rem]' : 'flex flex-row items-center p-4 gap-4',
           )}
         >
           {/* ── 썸네일 ── */}
           <div
             className={clsx(
-              'bg-slate-950 flex items-center justify-center overflow-hidden relative shrink-0 group',
-              isGrid ? 'h-40 border-b border-slate-800' : 'w-32 h-20 rounded border border-slate-800',
+              'bg-canvas flex items-center justify-center overflow-hidden relative shrink-0 group',
+              isGrid ? 'h-40 border-b border-border' : 'w-32 h-20 rounded border border-border',
             )}
           >
             {thumbUrl ? (
-              <img
-                src={thumbUrl}
+              <SafeImage                 src={thumbUrl}
                 alt={`클립 썸네일`}
                 className="w-full h-full object-cover transition-transform group-hover:scale-105"
                 draggable={false}
@@ -89,7 +89,7 @@ export const ClipCard = memo(function ClipCard({ sequenceId, clip, viewMode, isS
             
             {/* 하드컷 배지 */}
             {activeFrame.isHardCut && (
-              <div className="absolute top-2 left-2 bg-red-600/80 px-1.5 py-0.5 rounded text-[10px] font-bold text-white leading-none">
+              <div className="absolute top-2 left-2 bg-danger/80 px-1.5 py-0.5 rounded text-[10px] font-bold text-white leading-none">
                 HARD CUT
               </div>
             )}
@@ -104,13 +104,13 @@ export const ClipCard = memo(function ClipCard({ sequenceId, clip, viewMode, isS
           <div className={clsx('flex flex-col flex-1 min-w-0', isGrid ? 'p-3 gap-2' : 'gap-1')}>
             <div className="flex justify-between items-start gap-2">
               <h4
-                className="text-slate-200 font-medium text-sm truncate flex-1"
+                className="text-primary font-medium text-sm truncate flex-1"
                 title={activeFrame.description}
               >
                 {activeFrame.description || 'No description'}
               </h4>
               {!isGrid && activeTake.durationSec > 0 && (
-                <span className="text-xs text-slate-500 whitespace-nowrap shrink-0">
+                <span className="text-xs text-tertiary whitespace-nowrap shrink-0">
                   {activeTake.durationSec}s
                 </span>
               )}
@@ -118,16 +118,16 @@ export const ClipCard = memo(function ClipCard({ sequenceId, clip, viewMode, isS
 
             <div className={clsx('flex justify-between items-center mt-auto', isGrid && 'pt-1')}>
               <div className="flex gap-2">
-                 <span className="text-[10px] text-slate-500 bg-slate-800 px-1.5 py-0.5 rounded">
+                 <span className="text-[10px] text-tertiary bg-surface-1 px-1.5 py-0.5 rounded">
                    Take {clip.takes.length}
                  </span>
-                 <span className="text-[10px] text-slate-500 bg-slate-800 px-1.5 py-0.5 rounded">
+                 <span className="text-[10px] text-tertiary bg-surface-1 px-1.5 py-0.5 rounded">
                    Var {activeFrame.variants.length}
                  </span>
               </div>
               
               {isGrid && activeTake.durationSec > 0 && (
-                <span className="text-xs text-slate-500 ml-auto font-mono">
+                <span className="text-xs text-tertiary ml-auto font-mono">
                   {activeTake.durationSec.toFixed(1)}s
                 </span>
               )}
@@ -140,7 +140,7 @@ export const ClipCard = memo(function ClipCard({ sequenceId, clip, viewMode, isS
       <ContextMenu.Portal>
         <ContextMenu.Content
           className="
-            bg-slate-800 border border-slate-700 rounded-lg p-1
+            bg-surface-1 border border-border-subtle rounded-lg p-1
             min-w-[160px] shadow-2xl z-[100] overflow-hidden
             animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out
             data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95
@@ -150,8 +150,8 @@ export const ClipCard = memo(function ClipCard({ sequenceId, clip, viewMode, isS
             onSelect={handleDelete}
             className="
               flex items-center gap-2 px-3 py-1.5 rounded-md
-              text-sm text-red-400 cursor-default outline-none
-              data-[highlighted]:bg-red-900/40 data-[highlighted]:text-red-300
+              text-sm text-danger cursor-default outline-none
+              data-[highlighted]:bg-red-900/40 data-[highlighted]:text-danger
             "
           >
             <Trash2 size={13} />
@@ -175,7 +175,7 @@ const CaptionOverlay = memo(function CaptionOverlay({ prompt }: { prompt: string
     <>
       <button
         onClick={togglePrompt}
-        className="absolute bottom-2 right-2 bg-black/70 p-1.5 rounded-full text-slate-300 hover:text-white hover:bg-black transition-colors"
+        className="absolute bottom-2 right-2 bg-black/70 p-1.5 rounded-full text-secondary hover:text-white hover:bg-black transition-colors"
         title={showPrompt ? '프롬프트 숨기기' : '프롬프트 보기'}
       >
         {showPrompt ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -183,10 +183,10 @@ const CaptionOverlay = memo(function CaptionOverlay({ prompt }: { prompt: string
 
       {showPrompt && (
         <div 
-          className="absolute inset-x-0 bottom-0 bg-black/80 p-2 border-t border-slate-700/50 backdrop-blur-sm cursor-default"
+          className="absolute inset-x-0 bottom-0 bg-black/80 p-2 border-t border-border-subtle/50 backdrop-blur-sm cursor-default"
           onClick={(e) => e.stopPropagation()}
         >
-          <p className="text-xs text-slate-200 line-clamp-3 leading-relaxed select-text">
+          <p className="text-xs text-primary line-clamp-3 leading-relaxed select-text">
             {prompt}
           </p>
         </div>

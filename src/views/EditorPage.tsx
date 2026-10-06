@@ -35,12 +35,12 @@ const GhostCard = memo(function GhostCard({ clip }: { clip: Clip }) {
   return (
     <div
       className="
-        bg-slate-800 border border-blue-500 rounded-xl overflow-hidden
+        bg-surface-1 border border-accent rounded-xl overflow-hidden
         shadow-2xl ring-2 ring-blue-500/30 opacity-90
         flex flex-col h-64 w-full pointer-events-none
       "
     >
-      <div className="h-32 bg-slate-900 border-b border-slate-700 flex items-center justify-center relative overflow-hidden">
+      <div className="h-32 bg-surface-0 border-b border-border-subtle flex items-center justify-center relative overflow-hidden">
         {activeFrame.F0_reference ? (
           <img
             src={activeFrame.F0_reference}
@@ -49,11 +49,11 @@ const GhostCard = memo(function GhostCard({ clip }: { clip: Clip }) {
             draggable={false}
           />
         ) : (
-          <div className="w-8 h-8 rounded bg-slate-700" />
+          <div className="w-8 h-8 rounded bg-surface-2" />
         )}
       </div>
       <div className="p-3 flex-1">
-        <p className="text-sm text-slate-300 truncate font-medium">
+        <p className="text-sm text-secondary truncate font-medium">
           {activeFrame.description || 'No description'}
         </p>
       </div>
@@ -73,7 +73,7 @@ const ViewToggle = memo(function ViewToggle({
 }) {
   return (
     <div
-      className="flex bg-slate-900 border border-slate-800 rounded-lg p-1"
+      className="flex bg-surface-0 border border-border rounded-lg p-1"
       role="group"
       aria-label="보기 모드 선택"
     >
@@ -87,10 +87,10 @@ const ViewToggle = memo(function ViewToggle({
           aria-label={mode === 'grid' ? '그리드 보기' : '리스트 보기'}
           title={mode === 'grid' ? 'Grid View' : 'List View'}
           className={clsx(
-            'p-1.5 rounded transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400',
+            'p-1.5 rounded transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
             viewMode === mode
-              ? 'bg-slate-700 text-slate-200'
-              : 'text-slate-500 hover:text-slate-300',
+              ? 'bg-surface-2 text-primary'
+              : 'text-tertiary hover:text-secondary',
             disabled && 'opacity-50 cursor-not-allowed'
           )}
         >
@@ -298,16 +298,16 @@ export function EditorPage() {
   if (!sequences.length && !title) return null;
 
   return (
-    <div className="flex flex-col h-full w-full bg-slate-950 overflow-hidden relative">
-      <header className="flex justify-between items-center px-6 py-3.5 border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm shrink-0">
+    <div className="flex flex-col h-full w-full bg-canvas overflow-hidden relative">
+      <header className="flex justify-between items-center px-6 py-3.5 border-b border-border bg-canvas/80 backdrop-blur-sm shrink-0">
         <div>
-          <h2 className="text-lg font-bold text-slate-200 leading-tight">{title}</h2>
-          <p className="text-xs text-slate-500 mt-0.5">{clipCount} Clips</p>
+          <h2 className="text-lg font-bold text-primary leading-tight">{title}</h2>
+          <p className="text-xs text-tertiary mt-0.5">{clipCount} Clips</p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={handleOpenPicker}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-1 hover:bg-surface-2 text-primary text-sm font-medium transition-colors"
           >
             <Plus size={16} />
             <span>파일 추가</span>
@@ -315,7 +315,7 @@ export function EditorPage() {
           <button
             onClick={() => setIsExportOpen(true)}
             disabled={clipCount === 0}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download size={16} />
             <span>내보내기</span>
@@ -325,10 +325,10 @@ export function EditorPage() {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 overflow-y-auto p-5 relative border-r border-slate-800 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-5 relative border-r border-border custom-scrollbar">
           {clipCount === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-600">
-              <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-slate-700 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-border-subtle flex items-center justify-center">
                 <LayoutGrid size={24} className="text-slate-700" />
               </div>
               <p className="text-sm">프로젝트에 클립이 없습니다.</p>
@@ -346,8 +346,8 @@ export function EditorPage() {
                 {sequences.map(seq => (
                   <div key={seq.id} className="flex flex-col gap-3">
                     <div className="flex items-center gap-2 px-1">
-                      <div className="w-1 h-4 bg-blue-500 rounded-full" />
-                      <h3 className="text-sm font-bold text-slate-300 tracking-wide uppercase">{seq.label}</h3>
+                      <div className="w-1 h-4 bg-accent rounded-full" />
+                      <h3 className="text-sm font-bold text-secondary tracking-wide uppercase">{seq.label}</h3>
                       <span className="text-xs text-slate-600 font-medium ml-2">{seq.clips.length} Clips</span>
                     </div>
                     
@@ -395,7 +395,7 @@ export function EditorPage() {
           )}
         </div>
         
-        <div className="w-[45%] shrink-0 p-4 bg-slate-950 flex flex-col border-l border-slate-800">
+        <div className="w-[45%] shrink-0 p-4 bg-canvas flex flex-col border-l border-border">
           <PreviewPlayer />
         </div>
       </div>
@@ -459,29 +459,29 @@ const DropPromptModal = memo(function DropPromptModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-6 w-[480px]">
-        <h3 className="text-xl font-bold text-slate-100 mb-4">
+      <div className="bg-surface-0 border border-border-subtle rounded-xl shadow-2xl p-6 w-[480px]">
+        <h3 className="text-xl font-bold text-primary mb-4">
           {paths.length}개의 이미지 메타데이터 추가
         </h3>
-        <p className="text-sm text-slate-400 mb-4">
+        <p className="text-sm text-secondary mb-4">
           추가할 이미지에 각인될 프롬프트를 입력하세요.
         </p>
         <textarea
           value={promptText}
           onChange={(e) => setPromptText(e.target.value)}
-          className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-slate-200 focus:outline-none focus:border-blue-500 min-h-[100px]"
+          className="w-full bg-surface-1 border border-border-subtle rounded-lg p-3 text-primary focus:outline-none focus:border-accent min-h-[100px]"
           placeholder="예: 산 너머로 지는 아름다운 노을..."
         />
         <div className="flex justify-end gap-3 mt-6">
           <button
             onClick={onCancel}
-            className="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 transition-colors"
+            className="px-4 py-2 rounded-lg text-sm font-medium text-secondary hover:bg-surface-1 transition-colors"
           >
             취소
           </button>
           <button
             onClick={() => onSubmit(promptText)}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors"
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-accent text-white hover:bg-accent transition-colors"
           >
             추가
           </button>

@@ -1,3 +1,4 @@
+import { SafeImage } from '@/components/SafeImage';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStoryFrameStore } from '@/store';
 import { playbackClock } from '@/lib/playbackClock';
@@ -184,8 +185,8 @@ export function PreviewPlayer() {
   }, [layout, videoSource, audioSource, sync]);
 
   return (
-    <div className="flex flex-col h-full bg-slate-950 rounded-lg overflow-hidden border border-slate-800 shadow-xl relative">
-      <div className="absolute top-3 left-3 z-10 px-2 py-1 bg-black/60 rounded text-xs font-mono text-slate-300 backdrop-blur">
+    <div className="flex flex-col h-full bg-canvas rounded-lg overflow-hidden border border-border shadow-xl relative">
+      <div className="absolute top-3 left-3 z-10 px-2 py-1 bg-black/60 rounded text-xs font-mono text-secondary backdrop-blur">
         미리보기 플레이어
       </div>
 
@@ -211,8 +212,7 @@ export function PreviewPlayer() {
             onLoadedMetadata={handleLoadedMetadata}
           />
         ) : imageSource ? (
-          <img
-            src={imageSource}
+          <SafeImage             src={imageSource}
             className="w-full h-full object-contain"
             alt="Reference"
           />
