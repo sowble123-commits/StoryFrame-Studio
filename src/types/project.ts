@@ -110,7 +110,7 @@ export interface CutTimeline {
 export interface Frame {
   id: string;
   F0_reference?: string;
-  variants: any[];
+  variants: unknown[];
   isHardCut: boolean;
   description?: string;
   prompt?: string;
