@@ -1,0 +1,10 @@
+{
+  "id": "P2-01",
+  "status": "in-progress",
+  "touch_list": [
+    "src-tauri/src/main.rs"
+  ],
+  "acceptance_tests": [
+    "tests/acceptance/ui.spec.ts"
+  ]
+}
