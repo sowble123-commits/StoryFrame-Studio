@@ -1,0 +1,10 @@
+{
+  "id": "P1-03",
+  "status": "in-progress",
+  "touch_list": [
+    "src/components/timeline/PreviewPlayer.tsx"
+  ],
+  "acceptance_tests": [
+    "tests/acceptance/ui.spec.ts"
+  ]
+}
