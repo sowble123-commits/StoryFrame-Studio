@@ -14,7 +14,7 @@
 ## 🏗️ Phase 0: 코어 데이터 아키텍처 전면 재건축 (최우선)
 현재 `project.ts`는 '카카오 TV' 수준의 플랫한 구식 구조입니다. 이를 마스터 비전에 맞게 갈아엎습니다.
 
-* [ ] **P0-01: `src/types/project.ts` 인터페이스 교체**
+* [ ] **P0-01 (T-001): `src/types/project.ts` 인터페이스 교체**
   - **목표:** `Cut[]` 중심의 플랫 구조를 버리고, `Sequence(대분류) -> Clip(중분류) -> Take/Frame(소분류)` 계층 구조로 재설계.
   - **필수 속성:** 컷 내부에 `variants(가챠 슬롯)`, `isHardCut(연속성 태그)`, `F0_reference(퍼스트 프레임 앵커)` 필드 추가.
 * [ ] **P0-02: Zustand 스토어(`useProjectStore`) 로직 마이그레이션**
