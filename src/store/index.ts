@@ -53,6 +53,20 @@ function syncCuts(state: StoryFrameStore) {
   }
 }
 
+function findTakePath(sequences: Sequence[], takeId: string) {
+  for (let s = 0; s < sequences.length; s++) {
+    for (let c = 0; c < sequences[s].clips.length; c++) {
+      const takes = sequences[s].clips[c].takes;
+      for (let t = 0; t < takes.length; t++) {
+        if (takes[t].id === takeId) {
+          return { s, c, t, take: takes[t] };
+        }
+      }
+    }
+  }
+  return null;
+}
+
 export const useStoryFrameStore = create<StoryFrameStore>()(
   immer((set, get) => ({
     project: null,
@@ -207,64 +221,45 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
 
     moveCut: (oldIndex, newIndex) => {
       set((state) => {
-        if (!state.project?.sequences) return;
+        if (!state.project?.sequences || !state.project.cuts) return;
         
-        const allTakes: Take[] = [];
-        const locationMap = new Map();
+        const cuts = state.project.cuts;
+        if (oldIndex < 0 || oldIndex >= cuts.length || newIndex < 0 || newIndex >= cuts.length) return;
         
-        for (let s = 0; s < state.project.sequences.length; s++) {
-          const seq = state.project.sequences[s];
-          for (let c = 0; c < seq.clips.length; c++) {
-            const clip = seq.clips[c];
-            for (let t = 0; t < clip.takes.length; t++) {
-               allTakes.push(clip.takes[t]);
-               locationMap.set(clip.takes[t].id, {s, c, t});
-            }
-          }
-        }
+        const takeId = cuts[oldIndex].id;
+        const oldPath = findTakePath(state.project.sequences, takeId);
+        if (!oldPath) return;
         
-        if (oldIndex < 0 || oldIndex >= allTakes.length || newIndex < 0 || newIndex >= allTakes.length) return;
+        const [take] = state.project.sequences[oldPath.s].clips[oldPath.c].takes.splice(oldPath.t, 1);
         
-        const take = allTakes[oldIndex];
-        const oldLoc = locationMap.get(take.id);
-        
-        state.project.sequences[oldLoc.s].clips[oldLoc.c].takes.splice(oldLoc.t, 1);
-        
-        allTakes.splice(oldIndex, 1);
+        const tempCuts = [...cuts];
+        tempCuts.splice(oldIndex, 1);
+        const insertBeforeId = newIndex < tempCuts.length ? tempCuts[newIndex].id : null;
         
         let targetS = 0, targetC = 0, targetT = 0;
         
-        if (allTakes.length === 0) {
+        if (tempCuts.length === 0) {
            targetS = 0; targetC = 0; targetT = 0;
-        } else {
-           const insertBefore = newIndex < allTakes.length ? allTakes[newIndex] : null;
-           if (insertBefore) {
-               const loc = locationMap.get(insertBefore.id);
-               const seq = state.project.sequences[loc.s];
-               const clip = seq.clips[loc.c];
-               const mutatedTIndex = clip.takes.findIndex(t => t.id === insertBefore.id);
-               targetS = loc.s;
-               targetC = loc.c;
-               targetT = mutatedTIndex !== -1 ? mutatedTIndex : 0;
+        } else if (insertBeforeId) {
+           const insertPath = findTakePath(state.project.sequences, insertBeforeId);
+           if (insertPath) {
+             targetS = insertPath.s; targetC = insertPath.c; targetT = insertPath.t;
            } else {
-               const lastS = state.project.sequences.length - 1;
-               const lastC = state.project.sequences[lastS].clips.length - 1;
-               targetS = lastS;
-               targetC = lastC;
-               targetT = state.project.sequences[lastS].clips[lastC].takes.length;
+             const lastS = state.project.sequences.length - 1;
+             targetS = lastS; targetC = state.project.sequences[lastS].clips.length - 1;
+             targetT = state.project.sequences[targetS].clips[targetC].takes.length;
            }
+        } else {
+           const lastS = state.project.sequences.length - 1;
+           targetS = lastS; targetC = state.project.sequences[lastS].clips.length - 1;
+           targetT = state.project.sequences[targetS].clips[targetC].takes.length;
         }
         
         state.project.sequences[targetS].clips[targetC].takes.splice(targetT, 0, take);
         
         let indexCounter = 1;
-        for (let s = 0; s < state.project.sequences.length; s++) {
-          for (let c = 0; c < state.project.sequences[s].clips.length; c++) {
-            for (let t = 0; t < state.project.sequences[s].clips[c].takes.length; t++) {
-               state.project.sequences[s].clips[c].takes[t].index = indexCounter++;
-            }
-          }
-        }
+        state.project.sequences.forEach(s => s.clips.forEach(c => c.takes.forEach(t => t.index = indexCounter++)));
+        
         syncCuts(state);
       });
     },
@@ -272,40 +267,30 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
     deleteCut: (id) => {
       set((state) => {
         if (!state.project?.sequences) return;
-        for (const seq of state.project.sequences) {
-          for (const clip of seq.clips) {
-            const index = clip.takes.findIndex(t => t.id === id);
-            if (index !== -1) {
-              clip.takes.splice(index, 1);
-              let idx = 1;
-              state.project.sequences.forEach(s => s.clips.forEach(c => c.takes.forEach(t => t.index = idx++)));
-              if (state.project.uiState.selectedCutId === id) {
-                state.project.uiState.selectedCutId = null;
-              }
-              syncCuts(state);
-              return;
-            }
+        const path = findTakePath(state.project.sequences, id);
+        if (path) {
+          state.project.sequences[path.s].clips[path.c].takes.splice(path.t, 1);
+          let idx = 1;
+          state.project.sequences.forEach(s => s.clips.forEach(c => c.takes.forEach(t => t.index = idx++)));
+          if (state.project.uiState.selectedCutId === id) {
+            state.project.uiState.selectedCutId = null;
           }
+          syncCuts(state);
         }
       });
     },
+    
     duplicateCut: (id) => {
       set((state) => {
         if (!state.project?.sequences) return;
-        for (const seq of state.project.sequences) {
-          for (const clip of seq.clips) {
-            const index = clip.takes.findIndex(t => t.id === id);
-            if (index !== -1) {
-              const takeToDuplicate = clip.takes[index];
-              const newTake = JSON.parse(JSON.stringify(takeToDuplicate)); 
-              newTake.id = `cut_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-              clip.takes.splice(index + 1, 0, newTake);
-              let idx = 1;
-              state.project.sequences.forEach(s => s.clips.forEach(c => c.takes.forEach(t => t.index = idx++)));
-              syncCuts(state);
-              return;
-            }
-          }
+        const path = findTakePath(state.project.sequences, id);
+        if (path) {
+          const newTake = JSON.parse(JSON.stringify(path.take)); 
+          newTake.id = `cut_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+          state.project.sequences[path.s].clips[path.c].takes.splice(path.t + 1, 0, newTake);
+          let idx = 1;
+          state.project.sequences.forEach(s => s.clips.forEach(c => c.takes.forEach(t => t.index = idx++)));
+          syncCuts(state);
         }
       });
     },
@@ -313,14 +298,12 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
     updateCut: (id, patch) => {
       set((state) => {
         if (!state.project?.sequences) return;
-        for (const seq of state.project.sequences) {
-          for (const clip of seq.clips) {
-            const take = clip.takes.find((t) => t.id === id);
-            if (take) {
-              Object.assign(take, patch);
-              syncCuts(state);
-              return;
-            }
+        const path = findTakePath(state.project.sequences, id);
+        if (path) {
+          Object.assign(path.take, patch);
+          if (state.project.cuts) {
+             const cut = state.project.cuts.find(c => c.id === id);
+             if (cut) Object.assign(cut, patch);
           }
         }
       });
@@ -329,15 +312,17 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
     switchVideoVersion: (cutId, versionId) => {
       set((state) => {
         if (!state.project?.sequences) return;
-        for (const seq of state.project.sequences) {
-          for (const clip of seq.clips) {
-            const take = clip.takes.find((t) => t.id === cutId);
-            if (take?.video?.versions) {
-              take.video.versions.forEach((v) => {
+        const path = findTakePath(state.project.sequences, cutId);
+        if (path && path.take.video?.versions) {
+          path.take.video.versions.forEach(v => {
+            v.isSelected = v.versionId === versionId;
+          });
+          if (state.project.cuts) {
+            const cut = state.project.cuts.find(c => c.id === cutId);
+            if (cut && cut.video?.versions) {
+              cut.video.versions.forEach(v => {
                 v.isSelected = v.versionId === versionId;
               });
-              syncCuts(state);
-              return;
             }
           }
         }
@@ -349,25 +334,31 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
     setCurrentTime: (time) => { set((state) => { state.currentTime = time; }); },
     setIsPlaying: (playing) => { set((state) => { state.isPlaying = playing; }); },
     setTimelineZoom: (zoom) => { set((state) => { if (state.project) state.project.uiState.timelineZoom = zoom; }); },
+    
     updateCutTimeline: (cutId, patch) => {
       set((state) => {
         if (!state.project?.sequences) return;
-        for (const seq of state.project.sequences) {
-          for (const clip of seq.clips) {
-            const take = clip.takes.find((t) => t.id === cutId);
-            if (take) {
-              Object.assign(take.timeline, patch);
-              if (patch.inPointSec !== undefined || patch.outPointSec !== undefined) {
-                const dur = take.timeline.outPointSec - take.timeline.inPointSec;
-                if (dur > 0) take.timeline.effectiveDurationSec = dur;
-              }
-              syncCuts(state);
-              return;
-            }
+        const path = findTakePath(state.project.sequences, cutId);
+        if (path) {
+          Object.assign(path.take.timeline, patch);
+          if (patch.inPointSec !== undefined || patch.outPointSec !== undefined) {
+             const dur = path.take.timeline.outPointSec - path.take.timeline.inPointSec;
+             if (dur > 0) path.take.timeline.effectiveDurationSec = dur;
+          }
+          if (state.project.cuts) {
+             const cut = state.project.cuts.find(c => c.id === cutId);
+             if (cut) {
+               Object.assign(cut.timeline, patch);
+               if (patch.inPointSec !== undefined || patch.outPointSec !== undefined) {
+                 const dur = cut.timeline.outPointSec - cut.timeline.inPointSec;
+                 if (dur > 0) cut.timeline.effectiveDurationSec = dur;
+               }
+             }
           }
         }
       });
     },
+    
     addImportedMedia: (mediaPath, thumbnailPath, durationSec) => {
       set((state) => {
         if (!state.project) return;
