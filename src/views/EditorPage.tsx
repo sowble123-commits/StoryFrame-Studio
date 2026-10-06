@@ -3,10 +3,11 @@ import { useStoryFrameStore } from '@/store';
 import { useShallow } from 'zustand/react/shallow';
 import { ClipCard } from '@/components/ClipCard';
 import { PeekPanel } from '@/components/PeekPanel';
-import { LayoutGrid, List, Download } from 'lucide-react';
+import { LayoutGrid, List, Download, Plus } from 'lucide-react';
 import { clsx } from 'clsx';
 import { listen } from '@tauri-apps/api/event';
 import { invoke, convertFileSrc } from '@tauri-apps/api/core';
+import { open } from '@tauri-apps/plugin-dialog';
 
 import {
   DndContext,
@@ -228,6 +229,24 @@ export function EditorPage() {
     setDropPaths([]);
   };
 
+  const handleOpenPicker = async () => {
+    try {
+      const selected = await open({
+        multiple: true,
+        filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] }]
+      });
+      if (selected && Array.isArray(selected)) {
+        setDropPaths(selected);
+        setIsPromptModalOpen(true);
+      } else if (selected && typeof selected === 'string') {
+        setDropPaths([selected]);
+        setIsPromptModalOpen(true);
+      }
+    } catch (err) {
+      console.error('File picker error:', err);
+    }
+  };
+
   const handlePromptCancel = () => {
     setIsPromptModalOpen(false);
     setDropPaths([]);
@@ -286,6 +305,13 @@ export function EditorPage() {
           <p className="text-xs text-slate-500 mt-0.5">{clipCount} Clips</p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={handleOpenPicker}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium transition-colors"
+          >
+            <Plus size={16} />
+            <span>파일 추가</span>
+          </button>
           <button
             onClick={() => setIsExportOpen(true)}
             disabled={clipCount === 0}
@@ -435,29 +461,29 @@ const DropPromptModal = memo(function DropPromptModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-6 w-[480px]">
         <h3 className="text-xl font-bold text-slate-100 mb-4">
-          Add Metadata for {paths.length} Image(s)
+          {paths.length}개의 이미지 메타데이터 추가
         </h3>
         <p className="text-sm text-slate-400 mb-4">
-          Enter a prompt to associate with the dropped images.
+          추가할 이미지에 각인될 프롬프트를 입력하세요.
         </p>
         <textarea
           value={promptText}
           onChange={(e) => setPromptText(e.target.value)}
           className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-slate-200 focus:outline-none focus:border-blue-500 min-h-[100px]"
-          placeholder="e.g. A beautiful sunset over the mountains..."
+          placeholder="예: 산 너머로 지는 아름다운 노을..."
         />
         <div className="flex justify-end gap-3 mt-6">
           <button
             onClick={onCancel}
             className="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 transition-colors"
           >
-            Cancel
+            취소
           </button>
           <button
             onClick={() => onSubmit(promptText)}
             className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors"
           >
-            Add
+            추가
           </button>
         </div>
       </div>

@@ -13,15 +13,14 @@ interface ExportDialogProps {
   totalDuration?: number; // 선택: 알면 전달 (생략 시 백엔드가 ffprobe로 계산)
 }
 
-type ExportType = 'roughcut' | 'fcpxml' | 'capcut';
+type ExportType = 'roughcut' | 'fcpxml';
 
 const EXPORT_CONFIG: Record<
   ExportType,
   { label: string; command: string; ext: string; filterName: string; defaultPath: string }
 > = {
-  roughcut: { label: 'Roughcut Video (.mp4)', command: 'assemble_roughcut', ext: 'mp4', filterName: 'Video', defaultPath: 'roughcut.mp4' },
-  fcpxml: { label: 'FCPXML (Final Cut Pro)', command: 'export_fcpxml', ext: 'fcpxml', filterName: 'FCPXML', defaultPath: 'project.fcpxml' },
-  capcut: { label: 'CapCut Draft (.json)', command: 'export_capcut', ext: 'json', filterName: 'JSON', defaultPath: 'draft_content.json' },
+  roughcut: { label: '러프컷 비디오 (.mp4)', command: 'assemble_roughcut', ext: 'mp4', filterName: 'Video', defaultPath: 'roughcut.mp4' },
+  fcpxml: { label: '프리미어 프로 호환용 (.xml)', command: 'export_fcpxml', ext: 'fcpxml', filterName: 'FCPXML', defaultPath: 'project.fcpxml' },
 };
 
 /** 렌더 중 예외로 앱 전체가 죽지 않도록 다이얼로그 단위로 격리 */
@@ -142,14 +141,14 @@ const ExportDialogInner: React.FC<ExportDialogProps> = ({ isOpen, onClose, clips
             role="dialog" 
             aria-modal="true"
           >
-            <h2 className="text-xl font-bold mb-4">Export Project</h2>
+            <h2 className="text-xl font-bold mb-4">프로젝트 내보내기</h2>
 
         <div className="flex flex-col gap-2 mb-6">
           {(Object.keys(EXPORT_CONFIG) as ExportType[]).map((type) => (
             <label
               key={type}
               className={`flex items-center gap-2 px-3 py-2 border rounded cursor-pointer transition-colors ${
-                exportType === type ? 'border-blue-600 bg-blue-50' : 'hover:bg-gray-50'
+                exportType === type ? 'border-blue-600 bg-blue-50/10' : 'hover:bg-slate-800 border-slate-700'
               } ${isExporting ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
               <input
@@ -168,7 +167,7 @@ const ExportDialogInner: React.FC<ExportDialogProps> = ({ isOpen, onClose, clips
         {isExporting && (
           <div className="mb-4">
             <div
-              className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden"
+              className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden"
               role="progressbar"
               aria-valuemin={0}
               aria-valuemax={100}
@@ -185,12 +184,12 @@ const ExportDialogInner: React.FC<ExportDialogProps> = ({ isOpen, onClose, clips
 
         {errorMessage && (
           <div className="mb-4" role="alert">
-            <p className="text-sm font-semibold text-red-600 mb-1">내보내기에 실패했습니다</p>
-            <pre className="text-xs bg-red-50 border border-red-200 text-red-800 rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap break-all">
+            <p className="text-sm font-semibold text-red-500 mb-1">내보내기에 실패했습니다</p>
+            <pre className="text-xs bg-red-950/50 border border-red-900 text-red-200 rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap break-all">
               {errorMessage}
             </pre>
             <button
-              className="text-xs underline mt-1 text-gray-600 hover:text-black"
+              className="text-xs underline mt-1 text-slate-400 hover:text-white"
               onClick={() => navigator.clipboard.writeText(errorMessage)}
             >
               오류 복사
@@ -204,14 +203,14 @@ const ExportDialogInner: React.FC<ExportDialogProps> = ({ isOpen, onClose, clips
             onClick={handleClose}
             disabled={isExporting}
           >
-            Cancel
+            취소
           </button>
           <button
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
             onClick={handleExport}
             disabled={isExporting || clips.length === 0}
           >
-            {isExporting ? 'Exporting...' : errorMessage ? 'Retry' : 'Export'}
+            {isExporting ? '내보내는 중...' : errorMessage ? '다시 시도' : '내보내기'}
           </button>
         </div>
           </motion.div>

@@ -1,8 +1,7 @@
 import { memo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useStoryFrameStore } from '@/store';
-import { useShallow } from 'zustand/react/shallow';
-import { PanelLeftClose, PanelLeftOpen, Film, Music, Settings, Info, Users, Image as ImageIcon, MapPin } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, Film, Music, Settings, Users, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const MAIN_TABS = [
@@ -15,10 +14,6 @@ const MAIN_TABS = [
 
 export function CollapsibleSidebar() {
   const isCollapsed = useStoryFrameStore((state) => state.project?.uiState.sidebarCollapsed ?? false);
-  const synopsis = useStoryFrameStore((state) => state.project?.meta?.synopsis);
-  const characterSheets = useStoryFrameStore(useShallow((state) => state.project?.globalAssets?.characterSheets));
-  const moodboards = useStoryFrameStore(useShallow((state) => state.project?.globalAssets?.moodboards));
-  const hasProject = useStoryFrameStore((state) => !!state.project);
 
   const toggleSidebar = useStoryFrameStore((state) => state.toggleSidebar);
   const currentTab = useStoryFrameStore((state) => state.currentTab);
@@ -58,75 +53,6 @@ export function CollapsibleSidebar() {
           />
         ))}
         
-        {hasProject && !isCollapsed && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="flex flex-col gap-4 mt-6 px-2"
-          >
-            {/* Synopsis */}
-            {synopsis && (
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2 text-slate-300 font-medium text-sm">
-                  <Info size={16} />
-                  <h3>시놉시스</h3>
-                </div>
-                <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">
-                  {synopsis}
-                </p>
-              </div>
-            )}
-
-            {/* Character DNA */}
-            {characterSheets && characterSheets.length > 0 && (
-              <div className="flex flex-col gap-2 mt-2">
-                <div className="flex items-center gap-2 text-slate-300 font-medium text-sm">
-                  <Users size={16} />
-                  <h3>캐릭터 속성 (DNA)</h3>
-                </div>
-                <div className="flex flex-col gap-2">
-                  {characterSheets.map((char) => (
-                    <div key={char.id} className="bg-slate-800/50 rounded-md p-2 flex flex-col gap-1">
-                      <span className="text-sm text-slate-200 font-medium">{char.name}</span>
-                      <span className="text-xs text-slate-400">{char.styleNotes}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Moodboard */}
-            {moodboards && moodboards.length > 0 && (
-              <div className="flex flex-col gap-2 mt-2">
-                <div className="flex items-center gap-2 text-slate-300 font-medium text-sm">
-                  <ImageIcon size={16} />
-                  <h3>무드보드</h3>
-                </div>
-                <div className="flex flex-col gap-4">
-                  {moodboards.map((board) => (
-                    <div key={board.id} className="flex flex-col gap-2">
-                      <span className="text-xs text-slate-300 font-medium">{board.label}</span>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {board.imagePaths.map((path, idx) => (
-                          <div key={idx} className="aspect-square bg-slate-800 rounded overflow-hidden">
-                            <img 
-                              src={path} 
-                              alt={`${board.label} reference ${idx + 1}`} 
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                      {board.notes && <p className="text-xs text-slate-400 mt-1">{board.notes}</p>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </motion.div>
-        )}
-
         <div className="flex-1" />
         <SidebarItem id="settings" icon={<Settings size={20} />} label="설정" isCollapsed={isCollapsed} isActive={currentTab === 'settings'} onClick={setCurrentTab} />
       </div>
@@ -137,7 +63,7 @@ export function CollapsibleSidebar() {
 const SidebarItem = memo(function SidebarItem({ 
   id, icon, label, isCollapsed, isActive, onClick 
 }: { 
-  id: any; icon: React.ReactNode; label: string; isCollapsed: boolean; isActive?: boolean; onClick?: (id: any) => void 
+  id: "cuts" | "audio" | "settings" | "characters" | "locations"; icon: React.ReactNode; label: string; isCollapsed: boolean; isActive?: boolean; onClick?: (id: "cuts" | "audio" | "settings" | "characters" | "locations") => void 
 }) {
   const handleClick = useCallback(() => onClick?.(id), [id, onClick]);
   

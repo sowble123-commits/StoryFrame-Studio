@@ -51,7 +51,12 @@ interface StoryFrameStore {
   updateCutTimeline: (cutId: string, patch: Partial<import('@/types/project').CutTimeline>) => void;
   addImportedMedia: (mediaPath: string, thumbnailPath: string, durationSec: number) => void;
   addCharacterSheet: (sheet: import('@/types/project').CharacterSheet) => void;
+  updateCharacterSheet: (id: string, patch: Partial<import('@/types/project').CharacterSheet>) => void;
+  deleteCharacterSheet: (id: string) => void;
+  
   addMoodboard: (board: import('@/types/project').Moodboard) => void;
+  updateMoodboard: (id: string, patch: Partial<import('@/types/project').Moodboard>) => void;
+  deleteMoodboard: (id: string) => void;
 }
 
 // --- Utility Functions ---
@@ -486,6 +491,25 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
         state.project.globalAssets.characterSheets.push(sheet);
       });
     },
+
+    updateCharacterSheet: (id, patch) => {
+      set((state) => {
+        const sheets = state.project?.globalAssets?.characterSheets;
+        if (sheets) {
+          const sheet = sheets.find(s => s.id === id);
+          if (sheet) Object.assign(sheet, patch);
+        }
+      });
+    },
+
+    deleteCharacterSheet: (id) => {
+      set((state) => {
+        const assets = state.project?.globalAssets;
+        if (assets && assets.characterSheets) {
+          assets.characterSheets = assets.characterSheets.filter(s => s.id !== id);
+        }
+      });
+    },
     
     addMoodboard: (board) => {
       set((state) => {
@@ -493,6 +517,25 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
         if (!state.project.globalAssets) state.project.globalAssets = { characterSheets: [], moodboards: [] };
         if (!state.project.globalAssets.moodboards) state.project.globalAssets.moodboards = [];
         state.project.globalAssets.moodboards.push(board);
+      });
+    },
+
+    updateMoodboard: (id, patch) => {
+      set((state) => {
+        const boards = state.project?.globalAssets?.moodboards;
+        if (boards) {
+          const board = boards.find(b => b.id === id);
+          if (board) Object.assign(board, patch);
+        }
+      });
+    },
+
+    deleteMoodboard: (id) => {
+      set((state) => {
+        const assets = state.project?.globalAssets;
+        if (assets && assets.moodboards) {
+          assets.moodboards = assets.moodboards.filter(b => b.id !== id);
+        }
       });
     },
   }))
