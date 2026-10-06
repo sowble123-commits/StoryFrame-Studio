@@ -17,7 +17,7 @@
 * [x] **P0-01 (T-001): `src/types/project.ts` 인터페이스 교체**
   - **목표:** `Cut[]` 중심의 플랫 구조를 버리고, `Sequence(대분류) -> Clip(중분류) -> Take/Frame(소분류)` 계층 구조로 재설계.
   - **필수 속성:** 컷 내부에 `variants(가챠 슬롯)`, `isHardCut(연속성 태그)`, `F0_reference(퍼스트 프레임 앵커)` 필드 추가.
-* [ ] **P0-02 (T-002): Zustand 스토어(`useProjectStore`) 로직 마이그레이션**
+* [x] **P0-02 (T-002): Zustand 스토어(`useProjectStore`) 로직 마이그레이션**
   - **목표:** 바뀐 데이터 구조에 맞춰 상태 업데이트(추가, 삭제, 이동) 로직을 재작성하고 컴파일 에러 완벽 해결.
 
 ---
