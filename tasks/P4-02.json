@@ -1,11 +1,8 @@
 {
   "id": "P4-02",
-  "status": "todo",
+  "status": "in-progress",
   "touch_list": [
-    "src/store/index.ts",
-    "src/views/CharactersPage.tsx",
-    "src/views/LocationsPage.tsx",
-    "src/views/EditorPage.tsx"
+    "src/store/index.ts"
   ],
   "acceptance_tests": [
     "tests/acceptance/ui.spec.ts"
