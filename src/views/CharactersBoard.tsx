@@ -314,3 +314,5 @@ const CharacterEditorPanel = memo(function CharacterEditorPanel({
     </motion.div>
   );
 });
+
+// verified P2-02
