@@ -1,0 +1,12 @@
+{
+  "id": "T-001",
+  "title": "Phase 0 - project.ts 개편",
+  "status": "in-progress",
+  "touch_list": [
+    "src/types/project.ts",
+    "src/store/index.ts"
+  ],
+  "acceptance_tests": [
+    "tests/acceptance/project.spec.ts"
+  ]
+}
