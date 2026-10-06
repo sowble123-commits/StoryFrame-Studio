@@ -28,3 +28,5 @@ export function SafeImage({ src, alt, className, fallbackText = "No Image", ...p
     />
   );
 }
+
+// gate complete P0-03
