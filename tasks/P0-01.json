@@ -1,1 +1,39 @@
-{"id":"P0-01","title":"Phase 0-01","status":"in-progress","touch_list":["src/App.tsx"],"acceptance_tests":["tests/acceptance/project.spec.ts"]}
+{
+  "id": "P0-01",
+  "title": "Phase 0-01",
+  "status": "in-progress",
+  "touch_list": [
+    "src/App.tsx",
+    "docs/DEVELOPMENT_STATUS_REPORT.md",
+    "scripts/replace_colors.mjs",
+    "scripts/replace_img.mjs",
+    "src/components/SafeImage.tsx",
+    "project_state.json",
+    "src/components/ClipCard.tsx",
+    "src/components/CutCard.tsx",
+    "src/components/ErrorBoundary.tsx",
+    "src/components/ExportDialog.tsx",
+    "src/components/PeekPanel.tsx",
+    "src/components/ProjectCard.tsx",
+    "src/components/layout/CollapsibleSidebar.tsx",
+    "src/components/layout/MainContent.tsx",
+    "src/components/layout/StatusBar.tsx",
+    "src/components/layout/TitleBar.tsx",
+    "src/components/timeline/PreviewPlayer.tsx",
+    "src/components/timeline/Timeline.tsx",
+    "src/components/timeline/TimelineClip.tsx",
+    "src/components/timeline/VideoTrack.tsx",
+    "src/components/timeline/WaveformTrack.tsx",
+    "src/hooks/useAutoSave.ts",
+    "src/main.tsx",
+    "src/views/AudioPage.tsx",
+    "src/views/CharactersBoard.tsx",
+    "src/views/EditorPage.tsx",
+    "src/views/LocationsBoard.tsx",
+    "src/views/ProjectHubPage.tsx",
+    "src/views/SettingsPage.tsx"
+  ],
+  "acceptance_tests": [
+    "tests/acceptance/project.spec.ts"
+  ]
+}
