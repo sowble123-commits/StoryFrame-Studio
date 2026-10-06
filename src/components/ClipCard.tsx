@@ -23,15 +23,13 @@ export const ClipCard = memo(function ClipCard({ sequenceId, clip, viewMode, isS
   const projectPath = useStoryFrameStore((s) => s.project?.projectPath);
 
   // Get the active take and its primary frame
-  const activeTake = clip.takes[0]; // Assuming the first take is active for now
-  const activeFrame = activeTake?.frames[0];
+  const activeTake = useMemo(() => clip.takes[0], [clip.takes]);
+  const activeFrame = useMemo(() => activeTake?.frames[0], [activeTake?.frames]);
   
   const thumbUrl = useMemo(
     () => getAssetUrl(projectPath, activeFrame?.F0_reference ?? ''),
     [projectPath, activeFrame?.F0_reference],
   );
-
-  const [showPrompt, setShowPrompt] = useState(false);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: clip.id });
 
@@ -96,27 +94,9 @@ export const ClipCard = memo(function ClipCard({ sequenceId, clip, viewMode, isS
               </div>
             )}
             
-            {/* 캡션 토글 버튼 (P1-03) */}
+            {/* 캡션 오버레이 (P1-03) - 자체 상태 관리로 리렌더링 방지 */}
             {isGrid && activeFrame.prompt && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowPrompt(p => !p);
-                }}
-                className="absolute bottom-2 right-2 bg-black/70 p-1.5 rounded-full text-slate-300 hover:text-white hover:bg-black transition-colors"
-                title={showPrompt ? '프롬프트 숨기기' : '프롬프트 보기'}
-              >
-                {showPrompt ? <EyeOff size={14} /> : <Eye size={14} />}
-              </button>
-            )}
-
-            {/* 프롬프트 캡션 오버레이 (P1-03) */}
-            {isGrid && showPrompt && activeFrame.prompt && (
-              <div className="absolute inset-x-0 bottom-0 bg-black/80 p-2 border-t border-slate-700/50 backdrop-blur-sm">
-                <p className="text-xs text-slate-200 line-clamp-3 leading-relaxed">
-                  {activeFrame.prompt}
-                </p>
-              </div>
+              <CaptionOverlay prompt={activeFrame.prompt} />
             )}
           </div>
 
@@ -180,5 +160,37 @@ export const ClipCard = memo(function ClipCard({ sequenceId, clip, viewMode, isS
         </ContextMenu.Content>
       </ContextMenu.Portal>
     </ContextMenu.Root>
+  );
+});
+
+const CaptionOverlay = memo(function CaptionOverlay({ prompt }: { prompt: string }) {
+  const [showPrompt, setShowPrompt] = useState(false);
+  
+  const togglePrompt = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowPrompt((p) => !p);
+  }, []);
+
+  return (
+    <>
+      <button
+        onClick={togglePrompt}
+        className="absolute bottom-2 right-2 bg-black/70 p-1.5 rounded-full text-slate-300 hover:text-white hover:bg-black transition-colors"
+        title={showPrompt ? '프롬프트 숨기기' : '프롬프트 보기'}
+      >
+        {showPrompt ? <EyeOff size={14} /> : <Eye size={14} />}
+      </button>
+
+      {showPrompt && (
+        <div 
+          className="absolute inset-x-0 bottom-0 bg-black/80 p-2 border-t border-slate-700/50 backdrop-blur-sm cursor-default"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <p className="text-xs text-slate-200 line-clamp-3 leading-relaxed select-text">
+            {prompt}
+          </p>
+        </div>
+      )}
+    </>
   );
 });

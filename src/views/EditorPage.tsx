@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, memo, useMemo } from 'react';
+import { useEffect, useState, useCallback, memo, useMemo } from 'react';
 import { useStoryFrameStore } from '@/store';
 import { useShallow } from 'zustand/react/shallow';
 import { ClipCard } from '@/components/ClipCard';
@@ -104,14 +104,20 @@ const ViewToggle = memo(function ViewToggle({
 import { PreviewPlayer } from '@/components/timeline/PreviewPlayer';
 import { ExportDialog } from '@/components/ExportDialog';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import type { Sequence } from '@/types/project';
+
+const EMPTY_SEQUENCES: Sequence[] = [];
 
 export function EditorPage() {
   useKeyboardShortcuts();
 
   // Selector 세분화 — 각각 최소 slice만 구독하여 무관한 변경 시 리렌더 방지
   const title      = useStoryFrameStore((s) => s.project?.meta.title ?? '제목 없는 프로젝트');
-  const sequences  = useStoryFrameStore(useShallow((s) => s.project?.sequences ?? []));
-  const clipCount  = sequences.reduce((acc, seq) => acc + seq.clips.length, 0);
+  const sequencesRaw = useStoryFrameStore(useShallow((s) => s.project?.sequences));
+  const sequences  = sequencesRaw || EMPTY_SEQUENCES;
+  
+  const clipCount  = useMemo(() => sequences.reduce((acc, seq) => acc + seq.clips.length, 0), [sequences]);
+  
   const projectPath = useStoryFrameStore((s) => s.project?.projectPath);
   const viewMode   = useStoryFrameStore((s) => s.viewMode);
   const setViewMode      = useStoryFrameStore((s) => s.setViewMode);
@@ -125,30 +131,34 @@ export function EditorPage() {
   const clipsForExport = useMemo(() => [], []);
 
   // ── 파일 드롭 리스너 (메모리 릭 방지) ──────────────────────────────────────
-  const unlistenRef = useRef<ReturnType<typeof listen> | null>(null);
-
   useEffect(() => {
-    if (unlistenRef.current) {
-      unlistenRef.current.then((f) => f());
-    }
+    let unlistenFn: (() => void) | undefined;
+    let isMounted = true;
 
     const registerListener = async () => {
-      const unlisten = listen('tauri://drag-drop', async (event) => {
-        const payload = event.payload as { paths: string[] };
-        if (!payload?.paths || !projectPath) return;
+      try {
+        unlistenFn = await listen('tauri://drag-drop', async (event) => {
+          const payload = event.payload as { paths: string[] };
+          if (!payload?.paths || !projectPath) return;
 
-        // 임시 방어: addImportedMedia는 Deprecated됨
-        // 추후 Phase 2에서 처리
-      });
-      unlistenRef.current = Promise.resolve(await unlisten) as any;
+          // 임시 방어: addImportedMedia는 Deprecated됨
+          // 추후 Phase 2에서 처리
+        });
+        
+        if (!isMounted && unlistenFn) {
+          unlistenFn();
+        }
+      } catch (err) {
+        console.error('Drag-drop listener registration failed:', err);
+      }
     };
 
     registerListener();
 
     return () => {
-      if (unlistenRef.current) {
-        unlistenRef.current.then((f) => f());
-        unlistenRef.current = null;
+      isMounted = false;
+      if (unlistenFn) {
+        unlistenFn();
       }
     };
   }, [projectPath]);
@@ -306,8 +316,8 @@ export function EditorPage() {
 }
 
 function ClipCardWrapper({ sequenceId, clipId, viewMode }: { sequenceId: string, clipId: string, viewMode: 'grid' | 'list' }) {
-  const clip = useStoryFrameStore((s) => s.project?.sequences?.find(seq => seq.id === sequenceId)?.clips?.find(c => c.id === clipId));
-  const isSelected = useStoryFrameStore((s) => s.project?.uiState?.selectedClipId === clipId);
+  const clip = useStoryFrameStore(useCallback((s) => s.project?.sequences?.find(seq => seq.id === sequenceId)?.clips?.find(c => c.id === clipId), [sequenceId, clipId]));
+  const isSelected = useStoryFrameStore(useCallback((s) => s.project?.uiState?.selectedClipId === clipId, [clipId]));
   const setSelectedIds = useStoryFrameStore((s) => s.setSelectedIds);
 
   if (!clip) return null;
