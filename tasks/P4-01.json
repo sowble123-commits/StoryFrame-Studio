@@ -9,7 +9,10 @@
     "src/store/index.ts",
     "src/views/CharactersPage.tsx",
     "src/views/LocationsPage.tsx",
-    "src/views/EditorPage.tsx"
+    "src/views/EditorPage.tsx",
+    "src/App.tsx",
+    "src/views/CharactersBoard.tsx",
+    "src/views/LocationsBoard.tsx"
   ],
   "acceptance_tests": [
     "tests/acceptance/ui.spec.ts"
