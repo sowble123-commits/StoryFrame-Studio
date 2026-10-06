@@ -64,6 +64,78 @@ export interface GlobalAssets {
   moodboards: Moodboard[];
 }
 
+export interface VideoVersion {
+  versionId: string;
+  filePath: string;
+  durationSec: number;
+  generatedBy: string;
+  generatedAt: string;
+  isSelected: boolean;
+  thumbnailPath: string;
+  notes: string;
+}
+
+// --- NEW HIERARCHY ---
+export interface CutFrame {
+  id: string;
+  F0_reference: string;
+  variants: string[];
+  isHardCut: boolean;
+  description: string;
+  prompt: string;
+}
+
+export interface Take {
+  id: string;
+  frames: CutFrame[];
+  videoVersion: string;
+  durationSec: number;
+}
+
+export interface Clip {
+  id: string;
+  takes: Take[];
+}
+
+export interface Sequence {
+  id: string;
+  label: string;
+  clips: Clip[];
+}
+
+export interface RoughCut {
+  lastAssembledAt: string;
+  outputPath: string;
+  totalDurationSec: number;
+  cutOrder: string[];
+}
+
+export interface UiState {
+  selectedSequenceId: string | null;
+  selectedClipId: string | null;
+  selectedTakeId: string | null;
+  selectedFrameId: string | null;
+  selectedCutId: string | null;
+  sidebarCollapsed: boolean;
+  timelineZoom: number;
+  gridColumns: number;
+}
+
+export interface ProjectState {
+  $schema?: string;
+  version: string;
+  projectPath?: string;
+  meta: ProjectMeta;
+  progress: ProjectProgress;
+  music: ProjectMusic;
+  globalAssets: GlobalAssets;
+  sequences: Sequence[];
+  cuts: Cut[];
+  roughCut: RoughCut;
+  uiState: UiState;
+}
+
+// --- OLD HIERARCHY (Deprecated but kept for Phase 0 compilation) ---
 export interface CutStory {
   description: string;
   lyrics: string;
@@ -77,17 +149,6 @@ export interface CutIllustration {
   characterRefs: string[];
   moodboardRefs: string[];
   camera: { angle: string; movement: string; notes: string };
-}
-
-export interface VideoVersion {
-  versionId: string;
-  filePath: string;
-  durationSec: number;
-  generatedBy: string;
-  generatedAt: string;
-  isSelected: boolean;
-  thumbnailPath: string;
-  notes: string;
 }
 
 export interface CutVideo {
@@ -115,31 +176,4 @@ export interface Cut {
   illustration: CutIllustration;
   video: CutVideo;
   timeline: CutTimeline;
-}
-
-export interface RoughCut {
-  lastAssembledAt: string;
-  outputPath: string;
-  totalDurationSec: number;
-  cutOrder: string[];
-}
-
-export interface UiState {
-  selectedCutId: string | null;
-  sidebarCollapsed: boolean;
-  timelineZoom: number;
-  gridColumns: number;
-}
-
-export interface ProjectState {
-  $schema?: string;
-  version: string;
-  projectPath?: string;
-  meta: ProjectMeta;
-  progress: ProjectProgress;
-  music: ProjectMusic;
-  globalAssets: GlobalAssets;
-  cuts: Cut[];
-  roughCut: RoughCut;
-  uiState: UiState;
 }

@@ -1,8 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { ProjectState } from '@/types/project';
+import { ProjectState, Sequence, Clip, Take, CutFrame, Cut } from '@/types/project';
 import { invoke } from '@tauri-apps/api/core';
-
 import { open } from '@tauri-apps/plugin-dialog';
 
 interface RecentProject {
@@ -28,16 +27,23 @@ interface StoryFrameStore {
   loadRecentProjects: () => Promise<void>;
   toggleSidebar: () => void;
   toggleTimeline: () => void;
-  setSelectedCutId: (id: string | null) => void;
-  moveCut: (oldIndex: number, newIndex: number) => void;
-  deleteCut: (id: string) => void;
-  duplicateCut: (id: string) => void;
-  /** 외부 변경 감지 시 병합을 위한 액션 */
+  setSelectedIds: (sequenceId: string | null, clipId: string | null, takeId: string | null, frameId: string | null) => void;
+  
+  // Sequence / Clip / Take / Frame actions
+  addSequence: (sequence: Sequence) => void;
+  deleteSequence: (sequenceId: string) => void;
+  moveSequence: (oldIndex: number, newIndex: number) => void;
+  
+  addClip: (sequenceId: string, clip: Clip) => void;
+  deleteClip: (sequenceId: string, clipId: string) => void;
+  moveClip: (sequenceId: string, oldIndex: number, newIndex: number) => void;
+
+  addTake: (sequenceId: string, clipId: string, take: Take) => void;
+  deleteTake: (sequenceId: string, clipId: string, takeId: string) => void;
+
+  updateFrame: (sequenceId: string, clipId: string, takeId: string, frameId: string, patch: Partial<CutFrame>) => void;
+
   mergeProject: (path: string) => Promise<void>;
-  /** PeekPanel 양방향 바인딩: cut의 임의 필드를 부분 업데이트 */
-  updateCut: (id: string, patch: Partial<import('@/types/project').Cut>) => void;
-  /** 가챠 슬롯: 특정 컷의 비디오 버전 isSelected 스위칭 */
-  switchVideoVersion: (cutId: string, versionId: string) => void;
 
   // Playback state
   currentTime: number;
@@ -45,9 +51,28 @@ interface StoryFrameStore {
   setCurrentTime: (time: number) => void;
   setIsPlaying: (playing: boolean) => void;
   setTimelineZoom: (zoom: number) => void;
-  updateCutTimeline: (cutId: string, patch: Partial<import('@/types/project').CutTimeline>) => void;
+
+  // Deprecated methods for Phase 0 compilation
+  moveCut: (oldIndex: number, newIndex: number) => void;
+  deleteCut: (id: string) => void;
+  duplicateCut: (id: string) => void;
+  updateCut: (id: string, patch: Partial<Cut>) => void;
+  switchVideoVersion: (cutId: string, versionId: string) => void;
+  updateCutTimeline: (cutId: string, patch: unknown) => void;
   addImportedMedia: (mediaPath: string, thumbnailPath: string, durationSec: number) => void;
+  setSelectedCutId: (id: string | null) => void;
 }
+
+const defaultUiState = {
+  selectedSequenceId: null,
+  selectedClipId: null,
+  selectedTakeId: null,
+  selectedFrameId: null,
+  selectedCutId: null,
+  sidebarCollapsed: false,
+  timelineZoom: 100,
+  gridColumns: 3
+};
 
 export const useStoryFrameStore = create<StoryFrameStore>()(
   immer((set, get) => ({
@@ -78,7 +103,7 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
         set((state) => {
           state.recentProjects = recents;
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to load recent projects:', err);
       }
     },
@@ -90,7 +115,6 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
       try {
         const data = await invoke<ProjectState>('open_project', { path });
         set((state) => {
-          // Fallbacks for legacy/incomplete project.json
           if (!data.meta) {
             data.meta = { id: '', title: 'Untitled', genre: '', createdAt: '', updatedAt: '', synopsis: '', targetDurationSec: 0, thumbnailPath: '' };
           }
@@ -103,28 +127,23 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
           if (!data.progress) {
             data.progress = { phase: '', totalCuts: 0, completedCuts: 0, pendingTasks: [] };
           }
+          if (!data.sequences) data.sequences = [];
           if (!data.cuts) data.cuts = [];
           if (!data.roughCut) data.roughCut = { lastAssembledAt: '', outputPath: '', totalDurationSec: 0, cutOrder: [] };
-
           if (!data.uiState) {
-            data.uiState = { sidebarCollapsed: false, timelineZoom: 100, selectedCutId: null, gridColumns: 3, timelineVisible: false } as any;
-          } else {
-            data.uiState.sidebarCollapsed = data.uiState.sidebarCollapsed ?? false;
-            data.uiState.timelineZoom = data.uiState.timelineZoom ?? 100;
-            data.uiState.selectedCutId = data.uiState.selectedCutId ?? null;
-            data.uiState.gridColumns = data.uiState.gridColumns ?? 3;
-            (data.uiState as any).timelineVisible = (data.uiState as any).timelineVisible ?? false;
+            data.uiState = { ...defaultUiState };
           }
+
           state.project = data;
           state.isLoading = false;
         });
         get().loadRecentProjects();
-        if ((data as any).projectPath) {
-            await invoke('watch_project', { path: (data as any).projectPath }).catch(console.error);
+        if (data.projectPath) {
+            await invoke('watch_project', { path: data.projectPath }).catch(console.error);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         set((state) => {
-          state.error = err.toString();
+          state.error = String(err);
           state.isLoading = false;
         });
       }
@@ -154,28 +173,23 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
           if (!data.globalAssets) data.globalAssets = { characterSheets: [], moodboards: [] };
           if (!data.music) data.music = { filePath: '', durationSec: 0, bpm: 120, waveformCachePath: '', beatMarkers: [], sections: [] };
           if (!data.progress) data.progress = { phase: '', totalCuts: 0, completedCuts: 0, pendingTasks: [] };
+          if (!data.sequences) data.sequences = [];
           if (!data.cuts) data.cuts = [];
           if (!data.roughCut) data.roughCut = { lastAssembledAt: '', outputPath: '', totalDurationSec: 0, cutOrder: [] };
           if (!data.uiState) {
-            data.uiState = { sidebarCollapsed: false, timelineZoom: 100, selectedCutId: null, gridColumns: 3, timelineVisible: false } as any;
-          } else {
-            data.uiState.sidebarCollapsed = data.uiState.sidebarCollapsed ?? false;
-            data.uiState.timelineZoom = data.uiState.timelineZoom ?? 100;
-            data.uiState.selectedCutId = data.uiState.selectedCutId ?? null;
-            data.uiState.gridColumns = data.uiState.gridColumns ?? 3;
-            (data.uiState as any).timelineVisible = (data.uiState as any).timelineVisible ?? false;
+            data.uiState = { ...defaultUiState };
           }
 
           state.project = data;
           state.isLoading = false;
         });
         get().loadRecentProjects();
-        if ((data as any).projectPath) {
-            await invoke('watch_project', { path: (data as any).projectPath }).catch(console.error);
+        if (data.projectPath) {
+            await invoke('watch_project', { path: data.projectPath }).catch(console.error);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         set((state) => {
-          state.error = err.toString();
+          state.error = String(err);
           state.isLoading = false;
         });
       }
@@ -194,11 +208,6 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
             const currentUiState = state.project.uiState;
             state.project = data;
             state.project.uiState = { ...data.uiState, ...currentUiState };
-            // Ensure selectedCutId still exists
-            if (state.project.uiState.selectedCutId) {
-              const exists = state.project.cuts.some(c => c.id === state.project!.uiState.selectedCutId);
-              if (!exists) state.project.uiState.selectedCutId = null;
-            }
           } else {
             state.project = data;
           }
@@ -212,9 +221,9 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
       if (!project) return;
       try {
         await invoke('save_project_state', { path, state: project });
-      } catch (err: any) {
+      } catch (err: unknown) {
         set((state) => {
-          state.error = err.toString();
+          state.error = String(err);
         });
       }
     },
@@ -228,79 +237,111 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
     toggleTimeline: () => {
       set((state) => {
         if (state.project) {
-          (state.project.uiState as any).timelineVisible = !(state.project.uiState as any).timelineVisible;
+          // not used right now
         }
       });
     },
-    setSelectedCutId: (id) => {
+    setSelectedIds: (sequenceId, clipId, takeId, frameId) => {
       set((state) => {
         if (state.project) {
-          state.project.uiState.selectedCutId = id;
+          state.project.uiState.selectedSequenceId = sequenceId;
+          state.project.uiState.selectedClipId = clipId;
+          state.project.uiState.selectedTakeId = takeId;
+          state.project.uiState.selectedFrameId = frameId;
         }
       });
     },
-    moveCut: (oldIndex, newIndex) => {
+    
+    addSequence: (sequence) => {
       set((state) => {
-        if (!state.project || !state.project.cuts) return;
-        const cuts = state.project.cuts;
-        if (oldIndex < 0 || oldIndex >= cuts.length || newIndex < 0 || newIndex >= cuts.length) return;
-        const [movedItem] = cuts.splice(oldIndex, 1);
-        cuts.splice(newIndex, 0, movedItem);
-        // Update indices
-        cuts.forEach((cut, i) => {
-          cut.index = i + 1;
-        });
-      });
-    },
-    deleteCut: (id) => {
-      set((state) => {
-        if (!state.project || !state.project.cuts) return;
-        state.project.cuts = state.project.cuts.filter(c => c.id !== id);
-        if (state.project.uiState.selectedCutId === id) {
-          state.project.uiState.selectedCutId = null;
+        if (state.project) {
+          state.project.sequences.push(sequence);
         }
-        // Update indices
-        state.project.cuts.forEach((cut, i) => {
-          cut.index = i + 1;
-        });
       });
     },
-    duplicateCut: (id) => {
+    deleteSequence: (sequenceId) => {
       set((state) => {
-        if (!state.project || !state.project.cuts) return;
-        const cutIndex = state.project.cuts.findIndex(c => c.id === id);
-        if (cutIndex === -1) return;
-        
-        const cutToDuplicate = state.project.cuts[cutIndex];
-        const newCut = JSON.parse(JSON.stringify(cutToDuplicate)); // Deep copy
-        newCut.id = `cut_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-        
-        state.project.cuts.splice(cutIndex + 1, 0, newCut);
-        // Update indices
-        state.project.cuts.forEach((cut, i) => {
-          cut.index = i + 1;
-        });
+        if (state.project) {
+          state.project.sequences = state.project.sequences.filter(s => s.id !== sequenceId);
+        }
+      });
+    },
+    moveSequence: (oldIndex, newIndex) => {
+      set((state) => {
+        if (!state.project || !state.project.sequences) return;
+        const sequences = state.project.sequences;
+        if (oldIndex < 0 || oldIndex >= sequences.length || newIndex < 0 || newIndex >= sequences.length) return;
+        const [movedItem] = sequences.splice(oldIndex, 1);
+        sequences.splice(newIndex, 0, movedItem);
+      });
+    },
+    
+    addClip: (sequenceId, clip) => {
+      set((state) => {
+        if (!state.project) return;
+        const seq = state.project.sequences.find(s => s.id === sequenceId);
+        if (seq) {
+          seq.clips.push(clip);
+        }
+      });
+    },
+    deleteClip: (sequenceId, clipId) => {
+      set((state) => {
+        if (!state.project) return;
+        const seq = state.project.sequences.find(s => s.id === sequenceId);
+        if (seq) {
+          seq.clips = seq.clips.filter(c => c.id !== clipId);
+        }
+      });
+    },
+    moveClip: (sequenceId, oldIndex, newIndex) => {
+      set((state) => {
+        if (!state.project) return;
+        const seq = state.project.sequences.find(s => s.id === sequenceId);
+        if (!seq) return;
+        const clips = seq.clips;
+        if (oldIndex < 0 || oldIndex >= clips.length || newIndex < 0 || newIndex >= clips.length) return;
+        const [movedItem] = clips.splice(oldIndex, 1);
+        clips.splice(newIndex, 0, movedItem);
       });
     },
 
-    updateCut: (id, patch) => {
+    addTake: (sequenceId, clipId, take) => {
       set((state) => {
-        if (!state.project?.cuts) return;
-        const cut = state.project.cuts.find((c) => c.id === id);
-        if (!cut) return;
-        // immer draft에 shallow merge (중첩 필드는 스프레드)
-        Object.assign(cut, patch);
+        if (!state.project) return;
+        const seq = state.project.sequences.find(s => s.id === sequenceId);
+        if (!seq) return;
+        const clip = seq.clips.find(c => c.id === clipId);
+        if (clip) {
+          clip.takes.push(take);
+        }
+      });
+    },
+    deleteTake: (sequenceId, clipId, takeId) => {
+      set((state) => {
+        if (!state.project) return;
+        const seq = state.project.sequences.find(s => s.id === sequenceId);
+        if (!seq) return;
+        const clip = seq.clips.find(c => c.id === clipId);
+        if (clip) {
+          clip.takes = clip.takes.filter(t => t.id !== takeId);
+        }
       });
     },
 
-    switchVideoVersion: (cutId, versionId) => {
+    updateFrame: (sequenceId, clipId, takeId, frameId, patch) => {
       set((state) => {
-        if (!state.project?.cuts) return;
-        const cut = state.project.cuts.find((c) => c.id === cutId);
-        if (!cut?.video?.versions) return;
-        cut.video.versions.forEach((v) => {
-          v.isSelected = v.versionId === versionId;
-        });
+        if (!state.project) return;
+        const seq = state.project.sequences.find(s => s.id === sequenceId);
+        if (!seq) return;
+        const clip = seq.clips.find(c => c.id === clipId);
+        if (!clip) return;
+        const take = clip.takes.find(t => t.id === takeId);
+        if (!take) return;
+        const frame = take.frames.find(f => f.id === frameId);
+        if (frame) {
+          Object.assign(frame, patch);
+        }
       });
     },
 
@@ -323,82 +364,19 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
         }
       });
     },
-    updateCutTimeline: (cutId, patch) => {
-      set((state) => {
-        if (!state.project?.cuts) return;
-        const cut = state.project.cuts.find((c) => c.id === cutId);
-        if (!cut) return;
-        Object.assign(cut.timeline, patch);
-        if (patch.inPointSec !== undefined || patch.outPointSec !== undefined) {
-          const dur = cut.timeline.outPointSec - cut.timeline.inPointSec;
-          if (dur > 0) cut.timeline.effectiveDurationSec = dur;
-        }
-      });
-    },
-    addImportedMedia: (mediaPath, thumbnailPath, durationSec) => {
-      set((state) => {
-        if (!state.project) return;
-        if (!state.project.cuts) {
-          state.project.cuts = [];
-        }
-        
-        const cuts = state.project.cuts;
-        const index = cuts.length + 1;
-        const newCutId = `cut_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-        
-        const lastCut = cuts.length > 0 ? cuts[cuts.length - 1] : null;
-        const startTimeSec = lastCut 
-          ? (lastCut.timeline?.absoluteStartSec ?? 0) + (lastCut.timeline?.effectiveDurationSec ?? 0)
-          : 0;
 
-        const newCut: import('@/types/project').Cut = {
-          id: newCutId,
-          index,
-          sectionId: '',
-          story: {
-            description: '',
-            lyrics: '',
-            timeRange: { startSec: startTimeSec, endSec: startTimeSec + durationSec }
-          },
-          illustration: {
-            status: 'Todo',
-            primaryImagePath: '',
-            variantPaths: [],
-            characterRefs: [],
-            moodboardRefs: [],
-            camera: { angle: '', movement: '', notes: '' }
-          },
-          video: {
-            status: 'Todo',
-            motionDifficulty: '',
-            motionDescription: '',
-            lastFramePath: '',
-            versions: [
-              {
-                versionId: `v_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-                filePath: mediaPath,
-                durationSec: durationSec,
-                generatedBy: 'import',
-                generatedAt: new Date().toISOString(),
-                isSelected: true,
-                thumbnailPath: thumbnailPath,
-                notes: ''
-              }
-            ]
-          },
-          timeline: {
-            inPointSec: 0,
-            outPointSec: durationSec,
-            effectiveDurationSec: durationSec,
-            absoluteStartSec: startTimeSec,
-            transitionIn: '',
-            transitionOut: ''
-          }
-        };
-        
-        // immer 활용: draft 배열에 직접 요소 추가 (불변성 자동 유지)
-        cuts.push(newCut);
+    // Deprecated dummies
+    moveCut: () => { throw new Error('Deprecated in Phase 0'); },
+    deleteCut: () => { throw new Error('Deprecated in Phase 0'); },
+    duplicateCut: () => { throw new Error('Deprecated in Phase 0'); },
+    updateCut: () => { throw new Error('Deprecated in Phase 0'); },
+    switchVideoVersion: () => { throw new Error('Deprecated in Phase 0'); },
+    updateCutTimeline: () => { throw new Error('Deprecated in Phase 0'); },
+    addImportedMedia: () => { throw new Error('Deprecated in Phase 0'); },
+    setSelectedCutId: (id) => {
+      set((state) => {
+        if (state.project) state.project.uiState.selectedCutId = id;
       });
-    },
+    }
   }))
 );
