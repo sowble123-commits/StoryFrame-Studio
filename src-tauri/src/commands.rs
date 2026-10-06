@@ -175,3 +175,27 @@ pub fn delete_project(app: AppHandle, path: String) -> Result<(), String> {
     Ok(())
 }
 
+
+
+use little_exif::metadata::Metadata;
+use little_exif::exif_tag::ExifTag;
+
+#[tauri::command]
+pub fn inject_metadata(file_path: String, prompt: String) -> Result<(), String> {
+    let path = std::path::Path::new(&file_path);
+    if !path.exists() {
+        return Err("File does not exist".to_string());
+    }
+    
+    // We try to read existing metadata, or create new if none exists
+    let mut metadata = Metadata::new_from_path(path).unwrap_or(Metadata::new());
+    
+    metadata.set_tag(
+        ExifTag::ImageDescription(prompt)
+    );
+    
+    match metadata.write_to_file(path) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("Failed to write metadata: {:?}", e))
+    }
+}

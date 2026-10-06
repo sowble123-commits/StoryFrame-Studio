@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { ProjectState, Sequence, Clip, Take, CutFrame, Cut } from '@/types/project';
+import { ProjectState, Sequence, Clip, Take, CutFrame, Cut, CharacterSheet } from '@/types/project';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 
@@ -61,6 +61,9 @@ interface StoryFrameStore {
   updateCutTimeline: (cutId: string, patch: unknown) => void;
   addImportedMedia: (mediaPath: string, thumbnailPath: string, durationSec: number) => void;
   setSelectedCutId: (id: string | null) => void;
+  
+  // Character Sheets
+  addCharacterSheet: (sheet: CharacterSheet) => void;
 }
 
 const defaultUiState = {
@@ -360,6 +363,14 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
     setSelectedCutId: (id) => {
       set((state) => {
         if (state.project) state.project.uiState.selectedCutId = id;
+      });
+    },
+
+    addCharacterSheet: (sheet) => {
+      set((state) => {
+        if (state.project && state.project.globalAssets) {
+          state.project.globalAssets.characterSheets.push(sheet);
+        }
       });
     }
   }))

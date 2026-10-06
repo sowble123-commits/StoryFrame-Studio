@@ -6,6 +6,7 @@ import { PeekPanel } from '@/components/PeekPanel';
 import { LayoutGrid, List, Download } from 'lucide-react';
 import { clsx } from 'clsx';
 import { listen } from '@tauri-apps/api/event';
+import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 
 import {
   DndContext,
@@ -123,9 +124,15 @@ export function EditorPage() {
   const setViewMode      = useStoryFrameStore((s) => s.setViewMode);
   const moveClip         = useStoryFrameStore((s) => s.moveClip);
 
+  const addClip = useStoryFrameStore((s) => s.addClip);
+
   // 드래그 중인 클립
   const [activeClip, setActiveClip] = useState<Clip | null>(null);
   const [isExportOpen, setIsExportOpen] = useState(false);
+
+  // 이미지 드롭용 모달 상태
+  const [dropPaths, setDropPaths] = useState<string[]>([]);
+  const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
 
   // 클립 내보내기용 (임시 빈 배열)
   const clipsForExport = useMemo(() => [], []);
@@ -141,8 +148,11 @@ export function EditorPage() {
           const payload = event.payload as { paths: string[] };
           if (!payload?.paths || !projectPath) return;
 
-          // 임시 방어: addImportedMedia는 Deprecated됨
-          // 추후 Phase 2에서 처리
+          const imagePaths = payload.paths.filter(p => /\.(png|jpe?g|gif|webp)$/i.test(p));
+          if (imagePaths.length > 0) {
+            setDropPaths(imagePaths);
+            setIsPromptModalOpen(true);
+          }
         });
         
         if (!isMounted && unlistenFn) {
@@ -162,6 +172,55 @@ export function EditorPage() {
       }
     };
   }, [projectPath]);
+
+  const handlePromptSubmit = async (promptText: string) => {
+    setIsPromptModalOpen(false);
+    
+    const currentSequences = useStoryFrameStore.getState().project?.sequences ?? [];
+    if (currentSequences.length === 0) return;
+    
+    const targetSeqId = useStoryFrameStore.getState().project?.uiState?.selectedSequenceId || currentSequences[0].id;
+    
+    for (const path of dropPaths) {
+      try {
+        await invoke('inject_metadata', { filePath: path, prompt: promptText });
+        
+        const assetUrl = convertFileSrc(path);
+        
+        const clip: Clip = {
+          id: crypto.randomUUID(),
+          takes: [
+            {
+              id: crypto.randomUUID(),
+              frames: [
+                {
+                  id: crypto.randomUUID(),
+                  F0_reference: assetUrl,
+                  variants: [],
+                  isHardCut: false,
+                  description: promptText,
+                  prompt: promptText,
+                }
+              ],
+              videoVersion: null,
+              durationSec: 3,
+            }
+          ]
+        };
+        
+        addClip(targetSeqId, clip);
+      } catch (err) {
+        console.error('Failed to process dropped image:', err);
+      }
+    }
+    
+    setDropPaths([]);
+  };
+
+  const handlePromptCancel = () => {
+    setIsPromptModalOpen(false);
+    setDropPaths([]);
+  };
 
   // ── DnD 핸들러 ────────────────────────────────────────────────────────────
   const sensors = useSensors(
@@ -311,6 +370,13 @@ export function EditorPage() {
         onClose={() => setIsExportOpen(false)} 
         clips={clipsForExport} 
       />
+
+      <DropPromptModal
+        isOpen={isPromptModalOpen}
+        paths={dropPaths}
+        onSubmit={handlePromptSubmit}
+        onCancel={handlePromptCancel}
+      />
     </div>
   );
 }
@@ -330,5 +396,60 @@ function ClipCardWrapper({ sequenceId, clipId, viewMode }: { sequenceId: string,
       isSelected={isSelected}
       onClick={() => setSelectedIds(sequenceId, clipId, null, null)}
     />
+  );
+}
+
+function DropPromptModal({
+  isOpen,
+  paths,
+  onSubmit,
+  onCancel,
+}: {
+  isOpen: boolean;
+  paths: string[];
+  onSubmit: (prompt: string) => void;
+  onCancel: () => void;
+}) {
+  const [promptText, setPromptText] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setPromptText('');
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-6 w-[480px]">
+        <h3 className="text-xl font-bold text-slate-100 mb-4">
+          Add Metadata for {paths.length} Image(s)
+        </h3>
+        <p className="text-sm text-slate-400 mb-4">
+          Enter a prompt to associate with the dropped images.
+        </p>
+        <textarea
+          value={promptText}
+          onChange={(e) => setPromptText(e.target.value)}
+          className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-slate-200 focus:outline-none focus:border-blue-500 min-h-[100px]"
+          placeholder="e.g. A beautiful sunset over the mountains..."
+        />
+        <div className="flex justify-end gap-3 mt-6">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onSubmit(promptText)}
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors"
+          >
+            Add
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
