@@ -77,8 +77,8 @@ export interface VideoVersion {
 
 // --- NEW HIERARCHY ---
 export interface CutFrame {
-  id: string;
-  F0_reference: string;
+  readonly id: string;
+  F0_reference: string | null;
   variants: string[];
   isHardCut: boolean;
   description: string;
@@ -86,19 +86,19 @@ export interface CutFrame {
 }
 
 export interface Take {
-  id: string;
+  readonly id: string;
   frames: CutFrame[];
-  videoVersion: string;
+  videoVersion: string | null;
   durationSec: number;
 }
 
 export interface Clip {
-  id: string;
+  readonly id: string;
   takes: Take[];
 }
 
 export interface Sequence {
-  id: string;
+  readonly id: string;
   label: string;
   clips: Clip[];
 }

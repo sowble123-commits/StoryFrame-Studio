@@ -254,22 +254,21 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
     
     addSequence: (sequence) => {
       set((state) => {
-        if (state.project) {
-          state.project.sequences.push(sequence);
-        }
+        state.project?.sequences.push(sequence);
       });
     },
     deleteSequence: (sequenceId) => {
       set((state) => {
-        if (state.project) {
-          state.project.sequences = state.project.sequences.filter(s => s.id !== sequenceId);
-        }
+        const sequences = state.project?.sequences;
+        if (!sequences) return;
+        const index = sequences.findIndex(s => s.id === sequenceId);
+        if (index !== -1) sequences.splice(index, 1);
       });
     },
     moveSequence: (oldIndex, newIndex) => {
       set((state) => {
-        if (!state.project || !state.project.sequences) return;
-        const sequences = state.project.sequences;
+        const sequences = state.project?.sequences;
+        if (!sequences) return;
         if (oldIndex < 0 || oldIndex >= sequences.length || newIndex < 0 || newIndex >= sequences.length) return;
         const [movedItem] = sequences.splice(oldIndex, 1);
         sequences.splice(newIndex, 0, movedItem);
@@ -278,26 +277,21 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
     
     addClip: (sequenceId, clip) => {
       set((state) => {
-        if (!state.project) return;
-        const seq = state.project.sequences.find(s => s.id === sequenceId);
-        if (seq) {
-          seq.clips.push(clip);
-        }
+        const seq = state.project?.sequences.find(s => s.id === sequenceId);
+        if (seq) seq.clips.push(clip);
       });
     },
     deleteClip: (sequenceId, clipId) => {
       set((state) => {
-        if (!state.project) return;
-        const seq = state.project.sequences.find(s => s.id === sequenceId);
-        if (seq) {
-          seq.clips = seq.clips.filter(c => c.id !== clipId);
-        }
+        const seq = state.project?.sequences.find(s => s.id === sequenceId);
+        if (!seq) return;
+        const index = seq.clips.findIndex(c => c.id === clipId);
+        if (index !== -1) seq.clips.splice(index, 1);
       });
     },
     moveClip: (sequenceId, oldIndex, newIndex) => {
       set((state) => {
-        if (!state.project) return;
-        const seq = state.project.sequences.find(s => s.id === sequenceId);
+        const seq = state.project?.sequences.find(s => s.id === sequenceId);
         if (!seq) return;
         const clips = seq.clips;
         if (oldIndex < 0 || oldIndex >= clips.length || newIndex < 0 || newIndex >= clips.length) return;
@@ -308,37 +302,27 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
 
     addTake: (sequenceId, clipId, take) => {
       set((state) => {
-        if (!state.project) return;
-        const seq = state.project.sequences.find(s => s.id === sequenceId);
-        if (!seq) return;
-        const clip = seq.clips.find(c => c.id === clipId);
-        if (clip) {
-          clip.takes.push(take);
-        }
+        const clip = state.project?.sequences.find(s => s.id === sequenceId)?.clips.find(c => c.id === clipId);
+        if (clip) clip.takes.push(take);
       });
     },
     deleteTake: (sequenceId, clipId, takeId) => {
       set((state) => {
-        if (!state.project) return;
-        const seq = state.project.sequences.find(s => s.id === sequenceId);
-        if (!seq) return;
-        const clip = seq.clips.find(c => c.id === clipId);
-        if (clip) {
-          clip.takes = clip.takes.filter(t => t.id !== takeId);
-        }
+        const clip = state.project?.sequences.find(s => s.id === sequenceId)?.clips.find(c => c.id === clipId);
+        if (!clip) return;
+        const index = clip.takes.findIndex(t => t.id === takeId);
+        if (index !== -1) clip.takes.splice(index, 1);
       });
     },
 
     updateFrame: (sequenceId, clipId, takeId, frameId, patch) => {
       set((state) => {
-        if (!state.project) return;
-        const seq = state.project.sequences.find(s => s.id === sequenceId);
-        if (!seq) return;
-        const clip = seq.clips.find(c => c.id === clipId);
-        if (!clip) return;
-        const take = clip.takes.find(t => t.id === takeId);
-        if (!take) return;
-        const frame = take.frames.find(f => f.id === frameId);
+        const frame = state.project?.sequences
+          .find(s => s.id === sequenceId)?.clips
+          .find(c => c.id === clipId)?.takes
+          .find(t => t.id === takeId)?.frames
+          .find(f => f.id === frameId);
+        
         if (frame) {
           Object.assign(frame, patch);
         }
