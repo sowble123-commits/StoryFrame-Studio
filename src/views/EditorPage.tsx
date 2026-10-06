@@ -490,3 +490,5 @@ const DropPromptModal = memo(function DropPromptModal({
     </div>
   );
 });
+
+// verified P1-02
