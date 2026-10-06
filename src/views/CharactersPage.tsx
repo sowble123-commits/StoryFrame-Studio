@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { motion } from 'framer-motion';
 import { sfMotion } from '@/lib/motion';
 import { useStoryFrameStore } from '@/store';

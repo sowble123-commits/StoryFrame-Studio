@@ -16,8 +16,8 @@ interface StoryFrameStore {
   error: string | null;
   recentProjects: RecentProject[];
   viewMode: 'grid' | 'list';
-  currentTab: 'cuts' | 'audio' | 'settings';
-  setCurrentTab: (tab: 'cuts' | 'audio' | 'settings') => void;
+  currentTab: 'cuts' | 'audio' | 'settings' | 'characters' | 'locations';
+  setCurrentTab: (tab: 'cuts' | 'audio' | 'settings' | 'characters' | 'locations') => void;
   setViewMode: (mode: 'grid' | 'list') => void;
   setProject: (project: ProjectState | null) => void;
   loadProject: (path?: string) => Promise<void>;
@@ -34,6 +34,11 @@ interface StoryFrameStore {
   deleteCut: (id: string) => void;
   duplicateCut: (id: string) => void;
   
+  deleteClip: (sequenceId: string, clipId: string) => void;
+  moveClip: (sequenceId: string, oldIndex: number, newIndex: number) => void;
+  addClip: (sequenceId: string, clip: Clip) => void;
+  setSelectedIds: (seqId: string, clipId: string, takeId: string | null, frameId: string | null) => void;
+  
   mergeProject: (path: string) => Promise<void>;
   updateCut: (id: string, patch: Partial<Cut>) => void;
   switchVideoVersion: (cutId: string, versionId: string) => void;
@@ -45,6 +50,8 @@ interface StoryFrameStore {
   setTimelineZoom: (zoom: number) => void;
   updateCutTimeline: (cutId: string, patch: Partial<import('@/types/project').CutTimeline>) => void;
   addImportedMedia: (mediaPath: string, thumbnailPath: string, durationSec: number) => void;
+  addCharacterSheet: (sheet: import('@/types/project').CharacterSheet) => void;
+  addMoodboard: (board: import('@/types/project').Moodboard) => void;
 }
 
 function syncCuts(state: StoryFrameStore) {
@@ -101,14 +108,25 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
             data.sequences.push({
               id: `seq_migrated`,
               index: 1,
+              label: 'Migrated Sequence',
               clips: [{
                 id: `clip_migrated`,
                 index: 1,
-                takes: data.cuts.map(c => ({
+                takes: data.cuts.map((c, idx) => ({
                   ...c,
+                  index: idx + 1,
                   variants: (c as {variants?: unknown[]}).variants || [],
                   isHardCut: (c as {isHardCut?: boolean}).isHardCut || false,
-                  F0_reference: (c as {F0_reference?: string}).F0_reference || ''
+                  F0_reference: (c as {F0_reference?: string}).F0_reference || '',
+                  frames: [{
+                    id: `frame_${idx}`,
+                    F0_reference: (c as {F0_reference?: string}).F0_reference || '',
+                    variants: [],
+                    isHardCut: (c as {isHardCut?: boolean}).isHardCut || false,
+                    description: (c as any).story?.description || '',
+                  }],
+                  durationSec: (c as any).timeline?.effectiveDurationSec || 3,
+                  videoVersion: null
                 }))
               }]
             });
@@ -294,6 +312,49 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
         }
       });
     },
+    
+    deleteClip: (sequenceId, clipId) => {
+      set((state) => {
+        if (!state.project?.sequences) return;
+        const seq = state.project.sequences.find(s => s.id === sequenceId);
+        if (seq) {
+          seq.clips = seq.clips.filter(c => c.id !== clipId);
+          syncCuts(state);
+        }
+      });
+    },
+    
+    moveClip: (sequenceId, oldIndex, newIndex) => {
+      set((state) => {
+        if (!state.project?.sequences) return;
+        const seq = state.project.sequences.find(s => s.id === sequenceId);
+        if (seq && oldIndex >= 0 && oldIndex < seq.clips.length && newIndex >= 0 && newIndex < seq.clips.length) {
+          const [moved] = seq.clips.splice(oldIndex, 1);
+          seq.clips.splice(newIndex, 0, moved);
+          syncCuts(state);
+        }
+      });
+    },
+    
+    addClip: (sequenceId, clip) => {
+      set((state) => {
+        if (!state.project?.sequences) return;
+        const seq = state.project.sequences.find(s => s.id === sequenceId);
+        if (seq) {
+          seq.clips.push(clip);
+          syncCuts(state);
+        }
+      });
+    },
+    
+    setSelectedIds: (seqId, clipId, takeId, _frameId) => {
+      set((state) => {
+        if (!state.project) return;
+        state.project.uiState.selectedSequenceId = seqId;
+        state.project.uiState.selectedClipId = clipId;
+        state.project.uiState.selectedCutId = takeId;
+      });
+    },
 
     updateCut: (id, patch) => {
       set((state) => {
@@ -365,7 +426,7 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
         if (!state.project.sequences) state.project.sequences = [];
         
         if (state.project.sequences.length === 0) {
-          state.project.sequences.push({ id: `seq_${Date.now()}`, index: 1, clips: [] });
+          state.project.sequences.push({ id: `seq_${Date.now()}`, index: 1, label: 'Imported', clips: [] });
         }
         const lastSeq = state.project.sequences[state.project.sequences.length - 1];
         
@@ -392,11 +453,37 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
           timeline: { inPointSec: 0, outPointSec: durationSec, effectiveDurationSec: durationSec, absoluteStartSec: startTimeSec, transitionIn: '', transitionOut: '' },
           variants: [],
           isHardCut: false,
-          F0_reference: ''
+          F0_reference: '',
+          frames: [{
+            id: `frame_${Date.now()}`,
+            F0_reference: thumbnailPath,
+            variants: [],
+            isHardCut: false,
+            description: '',
+            prompt: ''
+          }],
+          durationSec: durationSec,
+          videoVersion: null
         };
         
         lastClip.takes.push(newTake);
         syncCuts(state);
+      });
+    },
+    addCharacterSheet: (sheet) => {
+      set((state) => {
+        if (!state.project) return;
+        if (!state.project.globalAssets) state.project.globalAssets = { characterSheets: [], moodboards: [] };
+        if (!state.project.globalAssets.characterSheets) state.project.globalAssets.characterSheets = [];
+        state.project.globalAssets.characterSheets.push(sheet);
+      });
+    },
+    addMoodboard: (board) => {
+      set((state) => {
+        if (!state.project) return;
+        if (!state.project.globalAssets) state.project.globalAssets = { characterSheets: [], moodboards: [] };
+        if (!state.project.globalAssets.moodboards) state.project.globalAssets.moodboards = [];
+        state.project.globalAssets.moodboards.push(board);
       });
     },
   }))

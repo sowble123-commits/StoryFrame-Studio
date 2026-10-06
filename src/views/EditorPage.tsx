@@ -190,9 +190,19 @@ export function EditorPage() {
         
         const clip: Clip = {
           id: crypto.randomUUID(),
+          index: 1,
           takes: [
             {
               id: crypto.randomUUID(),
+              index: 1,
+              sectionId: '',
+              story: { description: promptText, lyrics: '', timeRange: { startSec: 0, endSec: 3 } },
+              illustration: { status: 'Todo', primaryImagePath: '', variantPaths: [], characterRefs: [], moodboardRefs: [], camera: { angle: '', movement: '', notes: '' } },
+              video: { status: 'Todo', motionDifficulty: '', motionDescription: '', lastFramePath: '', versions: [] },
+              timeline: { inPointSec: 0, outPointSec: 3, effectiveDurationSec: 3, absoluteStartSec: 0, transitionIn: '', transitionOut: '' },
+              variants: [],
+              isHardCut: false,
+              F0_reference: assetUrl,
               frames: [
                 {
                   id: crypto.randomUUID(),

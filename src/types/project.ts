@@ -107,6 +107,15 @@ export interface CutTimeline {
   transitionOut: string;
 }
 
+export interface Frame {
+  id: string;
+  F0_reference?: string;
+  variants: any[];
+  isHardCut: boolean;
+  description?: string;
+  prompt?: string;
+}
+
 export interface Take {
   id: string;
   index: number;
@@ -118,6 +127,10 @@ export interface Take {
   variants: unknown[];
   isHardCut: boolean;
   F0_reference: string;
+  
+  frames: Frame[];
+  videoVersion?: string | null;
+  durationSec: number;
 }
 
 // Alias for backward compatibility with untouched UI components
@@ -132,6 +145,7 @@ export interface Clip {
 export interface Sequence {
   id: string;
   index: number;
+  label: string;
   clips: Clip[];
 }
 
@@ -143,10 +157,13 @@ export interface RoughCut {
 }
 
 export interface UiState {
-  selectedCutId: string | null;
+  selectedCutId?: string | null;
+  selectedSequenceId?: string | null;
+  selectedClipId?: string | null;
   sidebarCollapsed: boolean;
   timelineZoom: number;
   gridColumns: number;
+  timelineVisible?: boolean;
 }
 
 export interface ProjectState {
