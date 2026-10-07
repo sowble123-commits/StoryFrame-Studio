@@ -44,11 +44,16 @@ export interface ProjectMusic {
   sections: MusicSection[];
 }
 
+export interface CharacterImage {
+  id: string;
+  url: string;
+  label: string; // e.g. '정면', '측면', '표정', etc.
+}
+
 export interface CharacterSheet {
   id: string;
   name: string;
-  frontRefPath: string;
-  sideRefPath: string;
+  images: CharacterImage[];
   styleNotes: string;
 }
 

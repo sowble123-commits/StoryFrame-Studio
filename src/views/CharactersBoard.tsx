@@ -24,8 +24,7 @@ export function CharactersPage() {
     const dummySheet: CharacterSheet = {
       id: `char_${Date.now()}`,
       name: `새 캐릭터 ${characterSheets.length + 1}`,
-      frontRefPath: "",
-      sideRefPath: "",
+      images: [],
       styleNotes: "",
     };
     addCharacterSheet(dummySheet);
@@ -120,6 +119,8 @@ const CharacterCard = memo(function CharacterCard({
     [sheet.styleNotes],
   );
 
+  const firstImg = sheet.images?.[0];
+
   return (
     <div
       onClick={onClick}
@@ -130,15 +131,15 @@ const CharacterCard = memo(function CharacterCard({
       }`}
     >
       <div className="relative aspect-[3/4] bg-surface-1/50 group overflow-hidden flex items-center justify-center">
-        {sheet.frontRefPath ? (
+        {firstImg ? (
           <img
-            src={sheet.frontRefPath}
+            src={firstImg.url}
             alt={sheet.name}
             className="w-full h-full object-cover select-none group-hover:scale-105 transition-transform duration-700"
             draggable={true}
             onDragStart={(e) => {
-              e.dataTransfer.setData("text/plain", sheet.frontRefPath);
-              e.dataTransfer.setData("text/uri-list", sheet.frontRefPath);
+              e.dataTransfer.setData("text/plain", firstImg.url);
+              e.dataTransfer.setData("text/uri-list", firstImg.url);
             }}
           />
         ) : (
@@ -147,7 +148,7 @@ const CharacterCard = memo(function CharacterCard({
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/20 to-transparent opacity-60 pointer-events-none" />
 
         {/* Hover drag indicator */}
-        {sheet.frontRefPath && (
+        {firstImg && (
           <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
             드래그 가능
           </div>
@@ -227,22 +228,42 @@ const CharacterEditorPanel = memo(function CharacterEditorPanel({
     return () => clearTimeout(timer);
   }, [localName, localStyleNotes, sheet.id, sheet.name, sheet.styleNotes, updateCharacterSheet]);
 
-  const handleImageSelect = async () => {
+  const handleAddImage = async () => {
     try {
       const selected = await open({
-        multiple: false,
+        multiple: true,
         filters: [
           { name: "Images", extensions: ["png", "jpg", "jpeg", "webp"] },
         ],
       });
-      if (selected && typeof selected === "string") {
+      if (selected) {
+        const paths = Array.isArray(selected) ? selected : [selected];
+        const newImages = paths.map((p) => ({
+          id: `img_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+          url: convertFileSrc(p),
+          label: "레퍼런스",
+        }));
         updateCharacterSheet(sheet.id, {
-          frontRefPath: convertFileSrc(selected),
+          images: [...(sheet.images || []), ...newImages],
         });
       }
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const handleRemoveImage = (imgId: string) => {
+    updateCharacterSheet(sheet.id, {
+      images: (sheet.images || []).filter((img) => img.id !== imgId),
+    });
+  };
+
+  const handleUpdateImageLabel = (imgId: string, label: string) => {
+    updateCharacterSheet(sheet.id, {
+      images: (sheet.images || []).map((img) =>
+        img.id === imgId ? { ...img, label } : img,
+      ),
+    });
   };
 
   return (
@@ -277,28 +298,54 @@ const CharacterEditorPanel = memo(function CharacterEditorPanel({
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold text-secondary uppercase tracking-wider">
-            대표 이미지 (메인 레퍼런스)
-          </label>
-          <div
-            onClick={handleImageSelect}
-            className="aspect-square rounded-xl border-2 border-dashed border-border-subtle bg-canvas/50 hover:bg-surface-1 hover:border-slate-500 transition-colors cursor-pointer flex flex-col items-center justify-center overflow-hidden group"
-          >
-            {sheet.frontRefPath ? (
-              <img
-                src={sheet.frontRefPath}
-                className="w-full h-full object-cover"
-                alt=""
-              />
-            ) : (
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-secondary uppercase tracking-wider">
+              다각도 레퍼런스 이미지
+            </label>
+            <button 
+              onClick={handleAddImage}
+              className="text-xs text-accent hover:text-white transition-colors flex items-center gap-1"
+            >
+              <Plus size={14} /> 추가
+            </button>
+          </div>
+          
+          {(!sheet.images || sheet.images.length === 0) ? (
+            <div
+              onClick={handleAddImage}
+              className="aspect-video rounded-xl border-2 border-dashed border-border-subtle bg-canvas/50 hover:bg-surface-1 hover:border-slate-500 transition-colors cursor-pointer flex flex-col items-center justify-center overflow-hidden group"
+            >
               <div className="flex flex-col items-center gap-2 text-tertiary group-hover:text-secondary">
                 <ImageIcon size={32} />
                 <span className="text-xs font-medium">
-                  클릭하여 이미지 선택
+                  클릭하여 이미지 추가 (다중 선택 가능)
                 </span>
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {sheet.images.map((img) => (
+                <div key={img.id} className="relative group rounded-lg overflow-hidden border border-border bg-canvas aspect-[3/4] flex flex-col">
+                  <div className="flex-1 overflow-hidden relative">
+                    <img src={img.url} className="w-full h-full object-cover" alt="" />
+                    <button 
+                      onClick={() => handleRemoveImage(img.id)}
+                      className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-danger"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <input 
+                    type="text" 
+                    value={img.label}
+                    onChange={(e) => handleUpdateImageLabel(img.id, e.target.value)}
+                    placeholder="정면, 측면 등..."
+                    className="w-full bg-surface-1 text-xs px-2 py-1.5 text-center focus:outline-none focus:bg-accent focus:text-white transition-colors"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">
