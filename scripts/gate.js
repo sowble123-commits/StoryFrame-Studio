@@ -221,14 +221,12 @@ function nonceFor(secret) {
 }
 
 function cmdHookPreCommit() {
-  const staged = git(['diff', '--cached', '--name-only', '-z']).out.split('\0').filter(Boolean);
-  const touched = staged.filter(isProtectedPath);
-  if (touched.length === 0) return 0;
   const secret = readSecret();
   if (secret && process.env.GATE_NONCE === nonceFor(secret)) return 0;
   console.error(
-    `[gate] 커밋 거부: 보호 대상(${touched.join(', ')})은 gate.js 외에는 커밋할 수 없습니다.\n` +
-      '       BACKLOG 체크는 `node scripts/gate.js complete <ID>` 로만 가능합니다.',
+    '[gate] 시스템 경고: AI는 수동으로 git commit을 할 수 없습니다.\n' +
+    '       반드시 `node scripts/gate.js complete <ID>` 를 사용하여 엄격한 게이트 검증을 거치세요.\n' +
+    '       (사람 유저가 수동 커밋을 강제할 경우 --no-verify 옵션을 사용하세요.)'
   );
   return 1;
 }
