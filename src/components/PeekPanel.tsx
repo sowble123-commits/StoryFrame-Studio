@@ -1,7 +1,8 @@
 import { SafeImage } from '@/components/SafeImage';
 import { useCallback, useId } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Image, Clock, Zap, Gauge, Flame } from 'lucide-react';
+import { X, Image, Clock, Zap, Gauge, Flame, Copy } from 'lucide-react';
+import { toast } from 'sonner';
 import type { CutStory, CutIllustration } from '@/types/project';
 import { useStoryFrameStore } from '@/store';
 import { invoke } from '@tauri-apps/api/core';
@@ -255,6 +256,44 @@ export function PeekPanel() {
                   />
                 </div>
               )}
+            </div>
+
+            {/* ── 제미나이 연동 프롬프트 에디터 ── */}
+            <div className="flex flex-col gap-2 border-t border-border pt-4">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-secondary uppercase tracking-wider">
+                  제미나이/미드저니 프롬프트
+                </label>
+                <button
+                  onClick={() => {
+                    const textToCopy = cut.frames[0]?.prompt || cut.story.description;
+                    if (!textToCopy) {
+                      toast.error("복사할 프롬프트가 없습니다.");
+                      return;
+                    }
+                    navigator.clipboard.writeText(textToCopy);
+                    toast.success("프롬프트가 복사되었습니다.");
+                  }}
+                  className="flex items-center gap-1.5 px-2 py-1 rounded bg-surface-2 hover:bg-accent text-secondary hover:text-white transition-colors text-xs font-medium"
+                >
+                  <Copy size={13} />
+                  <span>복사</span>
+                </button>
+              </div>
+              <textarea
+                value={cut.frames[0]?.prompt || ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (!cut) return;
+                  const newFrames = [...cut.frames];
+                  if (newFrames.length > 0) {
+                    newFrames[0] = { ...newFrames[0], prompt: val };
+                    updateCut(cut.id, { frames: newFrames });
+                  }
+                }}
+                className="w-full h-32 bg-canvas border border-border rounded-lg px-3 py-2 text-primary text-sm focus:outline-none focus:border-accent transition-colors resize-y custom-scrollbar"
+                placeholder="여기에 제미나이나 미드저니에 붙여넣을 완성된 프롬프트를 작성하세요..."
+              />
             </div>
 
           </div>
