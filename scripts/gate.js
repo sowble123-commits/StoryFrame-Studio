@@ -704,6 +704,15 @@ function validateAcceptanceTests() {
 }
 
 function cmdLock() {
+  const diff = git(['diff', 'HEAD', '--', CONFIG.backlog]).out;
+  if (diff && /^\+.*\[[xX]\].*/m.test(diff)) {
+    console.error(
+      '[gate] 시스템 경고: BACKLOG.md의 체크박스([x])를 수동으로 조작할 수 없습니다.\n' +
+      '       작업 완료는 반드시 `node scripts/gate.js complete <ID>` 를 사용하세요.'
+    );
+    return 1;
+  }
+
   const secret = readSecret();
   if (!secret) die('먼저 `node scripts/gate.js init` 를 실행하세요.');
   if (!fs.existsSync(abs(CONFIG.backlog))) die(`${CONFIG.backlog} 가 없습니다.`);
