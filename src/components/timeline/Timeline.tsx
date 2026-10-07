@@ -2,6 +2,7 @@ import React, { useRef, useCallback, useMemo } from 'react';
 import { useStoryFrameStore } from '@/store';
 import { WaveformTrack } from './WaveformTrack';
 import { VideoTrack } from './VideoTrack';
+import { LyricsTrack } from './LyricsTrack';
 import { Play, Pause, ZoomIn, ZoomOut } from 'lucide-react';
 import { usePlaybackEngine } from '@/hooks/usePlaybackEngine';
 import { seekTo } from '@/lib/playbackClock';
@@ -82,6 +83,7 @@ export function Timeline() {
       <div ref={containerRef} className="relative flex-1 overflow-auto" onClick={handleTimelineClick}>
         <div className="relative min-h-full" style={{ width: `${trackWidth}px` }}>
           <VideoTrack pixelsPerSecond={zoom} />
+          <LyricsTrack pixelsPerSecond={zoom} />
           <WaveformTrack pixelsPerSecond={zoom} />
 
           <div

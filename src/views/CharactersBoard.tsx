@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { sfMotion } from "@/lib/motion";
 import { useStoryFrameStore } from "@/store";
 import { normalizeCharacterImages } from "@/types/project";
-import type { CharacterImage, CharacterSheet } from "@/types/project";
+import type { CharacterSheet } from "@/types/project";
 import { Plus, Copy, Check, X, Image as ImageIcon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { open } from "@tauri-apps/plugin-dialog";

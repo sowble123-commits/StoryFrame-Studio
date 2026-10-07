@@ -1,7 +1,7 @@
 import { SafeImage } from '@/components/SafeImage';
 import { useCallback, useEffect, useId, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Image, Clock, Zap, Gauge, Flame, Copy } from 'lucide-react';
+import { X, Image, Zap, Gauge, Flame, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import type { CutStory, CutIllustration, Frame } from '@/types/project';
 import { useStoryFrameStore } from '@/store';

@@ -104,7 +104,6 @@ const ViewToggle = memo(function ViewToggle({
 
 // ─── EditorPage ───────────────────────────────────────────────────────────────
 
-import { PreviewPlayer } from '@/components/timeline/PreviewPlayer';
 import { ExportDialog } from '@/components/ExportDialog';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import type { Sequence } from '@/types/project';
@@ -400,10 +399,6 @@ export function EditorPage() {
               </DragOverlay>
             </DndContext>
           )}
-        </div>
-        
-        <div className="w-[45%] shrink-0 p-4 bg-canvas flex flex-col border-l border-border">
-          <PreviewPlayer />
         </div>
       </div>
 

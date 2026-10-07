@@ -1,8 +1,12 @@
 import { motion } from 'framer-motion';
 import { sfMotion } from '@/lib/motion';
 import { Monitor, Database } from 'lucide-react';
+import { useStoryFrameStore } from '@/store';
 
 export function SettingsPage() {
+  const project = useStoryFrameStore(s => s.project);
+  const updateProjectMeta = useStoryFrameStore(s => s.updateProjectMeta);
+
   return (
     <motion.div {...sfMotion.fade} className="w-full h-full p-6 flex flex-col gap-6 overflow-y-auto custom-scrollbar bg-canvas">
       <div>
@@ -11,6 +15,56 @@ export function SettingsPage() {
       </div>
       
       <div className="max-w-3xl flex flex-col gap-6">
+        <div className="bg-surface-0 border border-border rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-surface-1 text-secondary rounded-lg">
+              <Monitor size={20} />
+            </div>
+            <h2 className="text-lg font-bold text-primary">프로젝트 정보</h2>
+          </div>
+          
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between py-2 border-b border-border">
+              <div className="w-1/3">
+                <p className="text-primary font-medium text-sm">프로젝트 제목</p>
+                <p className="text-tertiary text-xs">작업 중인 프로젝트의 이름입니다.</p>
+              </div>
+              <input 
+                type="text" 
+                value={project?.meta.title || ''}
+                onChange={(e) => updateProjectMeta({ title: e.target.value })}
+                className="w-2/3 bg-canvas border border-border-subtle text-primary rounded px-3 py-1.5 text-sm focus:outline-none focus:border-accent"
+              />
+            </div>
+
+            <div className="flex items-center justify-between py-2 border-b border-border">
+              <div className="w-1/3">
+                <p className="text-primary font-medium text-sm">장르 / 카테고리</p>
+                <p className="text-tertiary text-xs">프로젝트의 장르입니다.</p>
+              </div>
+              <input 
+                type="text" 
+                value={project?.meta.genre || ''}
+                onChange={(e) => updateProjectMeta({ genre: e.target.value })}
+                className="w-2/3 bg-canvas border border-border-subtle text-primary rounded px-3 py-1.5 text-sm focus:outline-none focus:border-accent"
+              />
+            </div>
+            
+            <div className="flex justify-between py-2 border-b border-border">
+              <div className="w-1/3 mt-2">
+                <p className="text-primary font-medium text-sm">시놉시스</p>
+                <p className="text-tertiary text-xs">전체적인 줄거리 요약입니다.</p>
+              </div>
+              <textarea 
+                value={project?.meta.synopsis || ''}
+                onChange={(e) => updateProjectMeta({ synopsis: e.target.value })}
+                rows={4}
+                className="w-2/3 bg-canvas border border-border-subtle text-primary rounded px-3 py-2 text-sm focus:outline-none focus:border-accent resize-none custom-scrollbar"
+              />
+            </div>
+          </div>
+        </div>
+
         <div className="bg-surface-0 border border-border rounded-xl p-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-surface-1 text-secondary rounded-lg">

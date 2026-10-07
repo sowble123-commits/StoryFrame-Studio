@@ -57,6 +57,8 @@ interface StoryFrameStore {
   addMoodboard: (board: import('@/types/project').Moodboard) => void;
   updateMoodboard: (id: string, patch: Partial<import('@/types/project').Moodboard>) => void;
   deleteMoodboard: (id: string) => void;
+  setMusic: (patch: Partial<import('@/types/project').ProjectMusic>) => void;
+  updateProjectMeta: (patch: Partial<import('@/types/project').ProjectMeta>) => void;
 }
 
 // --- Utility Functions ---
@@ -531,6 +533,22 @@ export const useStoryFrameStore = create<StoryFrameStore>()(
       set((state) => {
         if (!state.project || !state.project.globalAssets || !state.project.globalAssets.moodboards) return;
         state.project.globalAssets.moodboards = state.project.globalAssets.moodboards.filter(b => b.id !== id);
+      });
+    },
+    
+    setMusic: (patch) => {
+      set((state) => {
+        if (state.project) {
+          state.project.music = { ...state.project.music, ...patch };
+        }
+      });
+    },
+    
+    updateProjectMeta: (patch) => {
+      set((state) => {
+        if (state.project) {
+          state.project.meta = { ...state.project.meta, ...patch };
+        }
       });
     },
   }))
