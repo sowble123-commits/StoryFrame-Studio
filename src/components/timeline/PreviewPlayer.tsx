@@ -27,7 +27,7 @@ function findEntry(layout: readonly LayoutEntry[], t: number): LayoutEntry | und
 const DRIFT_TOLERANCE_SEC = 0.15;
 
 const DIFF_TOKEN_SPLITTER = /(\s+)/;
-const EDGE_PUNCTUATION = /^[.,!?;:(){}\[\]<>…—–-]+|[.,!?;:(){}\[\]<>…—–-]+$/g;
+const EDGE_PUNCTUATION = /^[.,!?;:(){}[\]<>…—–-]+|[.,!?;:(){}[\]<>…—–-]+$/g;
 
 interface PromptDiffToken {
   value: string;
