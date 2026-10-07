@@ -212,19 +212,53 @@ export function PreviewPlayer() {
             onLoadedMetadata={handleLoadedMetadata}
           />
         ) : imageSource ? (
-          <SafeImage             src={imageSource}
+          <SafeImage
+            src={imageSource}
             className="w-full h-full object-contain"
             alt="Reference"
           />
         ) : (
-          <div className="text-slate-600 text-sm">비디오/이미지 소스 없음</div>
+          <div className="text-slate-600 text-sm flex flex-col items-center gap-2">
+            <span>비디오/이미지 소스 없음</span>
+            {music && (
+              <span className="text-xs bg-surface-1 px-2 py-1 rounded">
+                BPM ({music.bpm}) 기반 자동 빈 클립 템포 매칭
+              </span>
+            )}
+          </div>
         )}
 
+        {/* 가사 오버레이 */}
         {activeLyrics && (
-          <div className="absolute bottom-8 left-0 right-0 text-center pointer-events-none">
+          <div className="absolute bottom-20 left-0 right-0 text-center pointer-events-none">
             <span className="bg-black/60 text-white text-xl md:text-2xl font-semibold px-4 py-1 rounded backdrop-blur">
               {activeLyrics}
             </span>
+          </div>
+        )}
+
+        {/* 프롬프트 Diff 오버레이 (가챠 시 변경된 단어 형광펜) */}
+        {activeFrame?.prompt && (
+          <div className="absolute bottom-8 left-0 right-0 text-center pointer-events-none px-10">
+            <div className="inline-block bg-black/70 text-slate-200 text-sm md:text-base px-4 py-2 rounded-lg backdrop-blur max-w-full truncate">
+              {(() => {
+                const original = activeTake?.story.description || '';
+                const current = activeFrame.prompt || '';
+                if (original === current || !original) return current;
+                
+                const oWords = original.split(/\s+/);
+                const cWords = current.split(/\s+/);
+                
+                return cWords.map((w, i) => {
+                  const isDiff = !oWords.includes(w);
+                  return (
+                    <span key={i} className={isDiff ? "bg-accent/40 text-blue-200 font-bold px-1 rounded mx-0.5" : "mx-0.5"}>
+                      {w}
+                    </span>
+                  );
+                });
+              })()}
+            </div>
           </div>
         )}
       </div>

@@ -195,7 +195,26 @@ export function PeekPanel() {
 
             {/* ── 타임라인 ── */}
             <div className="rounded-lg border border-border bg-canvas px-3 py-3 flex flex-col gap-2">
-              <p className="text-xs font-semibold text-secondary uppercase tracking-wide mb-1">Timeline</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-secondary uppercase tracking-wide mb-1">Timeline</p>
+                <button 
+                  onClick={() => {
+                    const bpm = useStoryFrameStore.getState().project?.music?.bpm || 120;
+                    const beats = parseFloat(prompt('템포(비트) 수를 입력하세요 (기본 4):', '4') || '4');
+                    if (!isNaN(beats) && beats > 0) {
+                      const dur = Number(((60 / bpm) * beats).toFixed(2));
+                      updateCut(cut.id, { 
+                        durationSec: dur, 
+                        timeline: { ...cut.timeline, effectiveDurationSec: dur, outPointSec: cut.timeline.inPointSec + dur } 
+                      });
+                      toast.success(`BPM ${bpm} 기준 ${beats}비트 -> ${dur}초로 자동 계산되었습니다.`);
+                    }
+                  }}
+                  className="text-[10px] bg-accent/20 text-accent hover:bg-accent hover:text-white transition-colors px-2 py-0.5 rounded-sm font-medium"
+                >
+                  BPM 비트 계산
+                </button>
+              </div>
               <div className="flex items-center gap-2 text-sm">
                 <Clock size={13} className="text-tertiary shrink-0" />
                 <span className="text-tertiary">In:</span>
