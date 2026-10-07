@@ -26,6 +26,36 @@ function findEntry(layout: readonly LayoutEntry[], t: number): LayoutEntry | und
 
 const DRIFT_TOLERANCE_SEC = 0.15;
 
+const DIFF_TOKEN_SPLITTER = /(\s+)/;
+const EDGE_PUNCTUATION = /^[.,!?;:(){}\[\]<>…—–-]+|[.,!?;:(){}\[\]<>…—–-]+$/g;
+
+interface PromptDiffToken {
+  value: string;
+  isChanged: boolean;
+}
+
+function normalizeDiffWord(value: string): string {
+  return value.trim().replace(EDGE_PUNCTUATION, '').toLocaleLowerCase();
+}
+
+function createPromptDiff(original: string | undefined, current: string | undefined): PromptDiffToken[] {
+  if (!current) return [];
+  const tokens = current.split(DIFF_TOKEN_SPLITTER);
+  if (!original || original === current) {
+    return tokens.map((value) => ({ value, isChanged: false }));
+  }
+  const originalWords = new Set(
+    original.split(DIFF_TOKEN_SPLITTER).map(normalizeDiffWord).filter(Boolean),
+  );
+  return tokens.map((value) => {
+    const normalized = normalizeDiffWord(value);
+    return {
+      value,
+      isChanged: normalized.length > 0 && !originalWords.has(normalized),
+    };
+  });
+}
+
 export function PreviewPlayer() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -68,6 +98,11 @@ export function PreviewPlayer() {
   const activeTake = activeClip?.takes[0];
   const activeFrame = activeTake?.frames[0];
   const videoVersion = activeTake?.videoVersion;
+
+  const promptDiff = useMemo(
+    () => createPromptDiff(activeTake?.story.description, activeFrame?.prompt),
+    [activeFrame?.prompt, activeTake?.story.description],
+  );
 
   const imageSource = useMemo(() => getAssetUrl(projectPath, activeFrame?.F0_reference ?? undefined), [projectPath, activeFrame?.F0_reference]);
   const videoSource = useMemo(() => getAssetUrl(projectPath, videoVersion ?? undefined), [projectPath, videoVersion]);
@@ -185,8 +220,8 @@ export function PreviewPlayer() {
   }, [layout, videoSource, audioSource, sync]);
 
   return (
-    <div className="flex flex-col h-full bg-canvas rounded-lg overflow-hidden border border-border shadow-xl relative">
-      <div className="absolute top-3 left-3 z-10 px-2 py-1 bg-black/60 rounded text-xs font-mono text-secondary backdrop-blur">
+    <div className="relative flex h-full flex-col overflow-hidden rounded-xl border border-border-subtle bg-canvas shadow-xl shadow-black/30">
+      <div className="absolute top-3 left-3 z-10 rounded-md border border-white/10 bg-surface-0/80 px-2 py-1 font-mono text-xs text-secondary backdrop-blur">
         미리보기 플레이어
       </div>
 
@@ -231,33 +266,26 @@ export function PreviewPlayer() {
         {/* 가사 오버레이 */}
         {activeLyrics && (
           <div className="absolute bottom-20 left-0 right-0 text-center pointer-events-none">
-            <span className="bg-black/60 text-white text-xl md:text-2xl font-semibold px-4 py-1 rounded backdrop-blur">
+            <span className="rounded-lg border border-white/10 bg-black/60 px-4 py-1.5 text-xl font-semibold text-white shadow-lg shadow-black/30 backdrop-blur md:text-2xl">
               {activeLyrics}
             </span>
           </div>
         )}
 
         {/* 프롬프트 Diff 오버레이 (가챠 시 변경된 단어 형광펜) */}
-        {activeFrame?.prompt && (
-          <div className="absolute bottom-8 left-0 right-0 text-center pointer-events-none px-10">
-            <div className="inline-block bg-black/70 text-slate-200 text-sm md:text-base px-4 py-2 rounded-lg backdrop-blur max-w-full truncate">
-              {(() => {
-                const original = activeTake?.story.description || '';
-                const current = activeFrame.prompt || '';
-                if (original === current || !original) return current;
-                
-                const oWords = original.split(/\s+/);
-                const cWords = current.split(/\s+/);
-                
-                return cWords.map((w, i) => {
-                  const isDiff = !oWords.includes(w);
-                  return (
-                    <span key={i} className={isDiff ? "bg-accent/40 text-blue-200 font-bold px-1 rounded mx-0.5" : "mx-0.5"}>
-                      {w}
-                    </span>
-                  );
-                });
-              })()}
+        {promptDiff.length > 0 && (
+          <div className='pointer-events-none absolute bottom-8 left-0 right-0 px-6 text-center md:px-10'>
+            <div className='inline-block max-w-full rounded-xl border border-white/10 bg-black/70 px-4 py-2 text-left text-sm leading-relaxed text-slate-200 shadow-lg shadow-black/30 backdrop-blur md:text-base line-clamp-2'>
+              {promptDiff.map((token, index) => (
+                <span
+                  key={index + '-' + token.value}
+                  className={token.isChanged
+                    ? 'rounded-sm bg-accent/30 px-0.5 font-semibold text-primary ring-1 ring-inset ring-accent/40'
+                    : undefined}
+                >
+                  {token.value}
+                </span>
+              ))}
             </div>
           </div>
         )}

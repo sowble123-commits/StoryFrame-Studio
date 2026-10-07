@@ -50,6 +50,45 @@ export interface CharacterImage {
   label: string; // e.g. '정면', '측면', '표정', etc.
 }
 
+export const EMPTY_CHARACTER_IMAGES: readonly CharacterImage[] = Object.freeze([]);
+
+export function isCharacterImage(value: unknown): value is CharacterImage {
+  if (typeof value !== 'object' || value === null) return false;
+  const image = value as Record<string, unknown>;
+  return (
+    typeof image.id === 'string' && image.id.trim().length > 0 &&
+    typeof image.url === 'string' && image.url.trim().length > 0 &&
+    typeof image.label === 'string'
+  );
+}
+
+export function normalizeCharacterImages(value: unknown): readonly CharacterImage[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    return EMPTY_CHARACTER_IMAGES;
+  }
+
+  const ids = new Set<string>();
+  let isSafe = true;
+  for (const image of value) {
+    if (!isCharacterImage(image) || ids.has(image.id)) {
+      isSafe = false;
+      break;
+    }
+    ids.add(image.id);
+  }
+  if (isSafe) return value as CharacterImage[];
+
+  const unique: CharacterImage[] = [];
+  const seen = new Set<string>();
+  for (const image of value) {
+    if (isCharacterImage(image) && !seen.has(image.id)) {
+      seen.add(image.id);
+      unique.push(image);
+    }
+  }
+  return unique;
+}
+
 export interface CharacterSheet {
   id: string;
   name: string;

@@ -1,15 +1,20 @@
-import { useState, useCallback, memo, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sfMotion } from "@/lib/motion";
 import { useStoryFrameStore } from "@/store";
-import { CharacterSheet } from "@/types/project";
+import { normalizeCharacterImages } from "@/types/project";
+import type { CharacterImage, CharacterSheet } from "@/types/project";
 import { Plus, Copy, Check, X, Image as ImageIcon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { open } from "@tauri-apps/plugin-dialog";
 import { convertFileSrc } from "@tauri-apps/api/core";
 
+const EMPTY_CHARACTER_SHEETS: readonly CharacterSheet[] = [];
+
 export function CharactersPage() {
-  const project = useStoryFrameStore((state) => state.project);
+  const characterSheets = useStoryFrameStore(
+    (state) => state.project?.globalAssets?.characterSheets ?? EMPTY_CHARACTER_SHEETS,
+  );
   const addCharacterSheet = useStoryFrameStore(
     (state) => state.addCharacterSheet,
   );
@@ -17,8 +22,11 @@ export function CharactersPage() {
     (state) => state.deleteCharacterSheet,
   );
 
-  const characterSheets = project?.globalAssets?.characterSheets || [];
   const [selectedCharId, setSelectedCharId] = useState<string | null>(null);
+
+  const handleSelect = useCallback((id: string) => {
+    setSelectedCharId(id);
+  }, []);
 
   const handleAddDummy = () => {
     const dummySheet: CharacterSheet = {
@@ -31,7 +39,10 @@ export function CharactersPage() {
     setSelectedCharId(dummySheet.id);
   };
 
-  const selectedChar = characterSheets.find((c) => c.id === selectedCharId);
+  const selectedChar = useMemo(
+    () => characterSheets.find((character) => character.id === selectedCharId),
+    [characterSheets, selectedCharId],
+  );
 
   return (
     <div className="w-full h-full flex bg-canvas overflow-hidden">
@@ -43,13 +54,12 @@ export function CharactersPage() {
           <div>
             <h1 className="text-2xl font-bold text-primary">캐릭터 보드</h1>
             <p className="text-secondary mt-1 text-sm">
-              작품에 등장하는 캐릭터들의 메타데이터와 레퍼런스를 통합
-              관리합니다.
+              작품에 등장하는 캐릭터들의 메타데이터와 레퍼런스를 통합 관리합니다.
             </p>
           </div>
           <button
             onClick={handleAddDummy}
-            className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent text-white rounded-lg transition-colors font-medium text-sm shadow-lg shadow-blue-500/20"
+            className="inline-flex items-center gap-2 rounded-lg border border-accent/50 bg-accent px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-accent/20 transition-colors hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
           >
             <Plus size={16} />새 캐릭터
           </button>
@@ -69,7 +79,7 @@ export function CharactersPage() {
                 key={sheet.id}
                 sheet={sheet}
                 isSelected={selectedCharId === sheet.id}
-                onClick={() => setSelectedCharId(sheet.id)}
+                onSelect={handleSelect}
               />
             ))}
           </div>
@@ -96,13 +106,20 @@ export function CharactersPage() {
 const CharacterCard = memo(function CharacterCard({
   sheet,
   isSelected,
-  onClick,
+  onSelect,
 }: {
   sheet: CharacterSheet;
   isSelected: boolean;
-  onClick: () => void;
+  onSelect: (id: string) => void;
 }) {
   const [copied, setCopied] = useState(false);
+
+  const images = useMemo(
+    () => normalizeCharacterImages(sheet.images),
+    [sheet.images],
+  );
+  const firstImg = images[0];
+  const handleClick = useCallback(() => onSelect(sheet.id), [onSelect, sheet.id]);
 
   const handleCopy = useCallback(
     (e: React.MouseEvent) => {
@@ -119,11 +136,9 @@ const CharacterCard = memo(function CharacterCard({
     [sheet.styleNotes],
   );
 
-  const firstImg = sheet.images?.[0];
-
   return (
     <div
-      onClick={onClick}
+      onClick={handleClick}
       className={`flex flex-col bg-surface-0 border rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer ${
         isSelected
           ? "border-accent shadow-blue-500/10"
@@ -228,6 +243,11 @@ const CharacterEditorPanel = memo(function CharacterEditorPanel({
     return () => clearTimeout(timer);
   }, [localName, localStyleNotes, sheet.id, sheet.name, sheet.styleNotes, updateCharacterSheet]);
 
+  const images = useMemo(
+    () => normalizeCharacterImages(sheet.images),
+    [sheet.images],
+  );
+
   const handleAddImage = async () => {
     try {
       const selected = await open({
@@ -244,7 +264,7 @@ const CharacterEditorPanel = memo(function CharacterEditorPanel({
           label: "레퍼런스",
         }));
         updateCharacterSheet(sheet.id, {
-          images: [...(sheet.images || []), ...newImages],
+          images: [...images, ...newImages],
         });
       }
     } catch (err) {
@@ -252,19 +272,19 @@ const CharacterEditorPanel = memo(function CharacterEditorPanel({
     }
   };
 
-  const handleRemoveImage = (imgId: string) => {
+  const handleRemoveImage = useCallback((imageId: string) => {
     updateCharacterSheet(sheet.id, {
-      images: (sheet.images || []).filter((img) => img.id !== imgId),
+      images: images.filter((image) => image.id !== imageId),
     });
-  };
+  }, [images, sheet.id, updateCharacterSheet]);
 
-  const handleUpdateImageLabel = (imgId: string, label: string) => {
+  const handleUpdateImageLabel = useCallback((imageId: string, label: string) => {
     updateCharacterSheet(sheet.id, {
-      images: (sheet.images || []).map((img) =>
-        img.id === imgId ? { ...img, label } : img,
+      images: images.map((image) =>
+        image.id === imageId && image.label !== label ? { ...image, label } : image,
       ),
     });
-  };
+  }, [images, sheet.id, updateCharacterSheet]);
 
   return (
     <motion.div
@@ -310,10 +330,10 @@ const CharacterEditorPanel = memo(function CharacterEditorPanel({
             </button>
           </div>
           
-          {(!sheet.images || sheet.images.length === 0) ? (
+          {images.length === 0 ? (
             <div
               onClick={handleAddImage}
-              className="aspect-video rounded-xl border-2 border-dashed border-border-subtle bg-canvas/50 hover:bg-surface-1 hover:border-slate-500 transition-colors cursor-pointer flex flex-col items-center justify-center overflow-hidden group"
+              className="group flex aspect-video cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed border-border-subtle bg-canvas/50 transition-colors hover:border-accent/60 hover:bg-surface-1"
             >
               <div className="flex flex-col items-center gap-2 text-tertiary group-hover:text-secondary">
                 <ImageIcon size={32} />
@@ -324,7 +344,7 @@ const CharacterEditorPanel = memo(function CharacterEditorPanel({
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
-              {sheet.images.map((img) => (
+              {images.map((img) => (
                 <div key={img.id} className="relative group rounded-lg overflow-hidden border border-border bg-canvas aspect-[3/4] flex flex-col">
                   <div className="flex-1 overflow-hidden relative">
                     <img src={img.url} className="w-full h-full object-cover" alt="" />
@@ -355,7 +375,7 @@ const CharacterEditorPanel = memo(function CharacterEditorPanel({
           <textarea
             value={localStyleNotes}
             onChange={(e) => setLocalStyleNotes(e.target.value)}
-            className="bg-canvas border border-border rounded-lg px-3 py-3 text-primary text-sm focus:outline-none focus:border-accent transition-colors min-h-[160px] resize-y"
+            className="min-h-[160px] resize-y rounded-lg border border-border-subtle bg-canvas px-3 py-3 text-sm leading-relaxed text-primary shadow-inner shadow-black/10 placeholder:text-tertiary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             placeholder="AI 생성 시 주입할 캐릭터 외형, 의상, 특징 프롬프트를 상세히 적어주세요."
           />
         </div>
