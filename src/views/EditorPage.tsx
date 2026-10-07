@@ -8,6 +8,7 @@ import { clsx } from 'clsx';
 import { listen } from '@tauri-apps/api/event';
 import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
+import { toast } from 'sonner';
 
 import {
   DndContext,
@@ -150,9 +151,15 @@ export function EditorPage() {
           const payload = event.payload as { paths: string[] };
           if (!payload?.paths || !projectPath) return;
 
-          const imagePaths = payload.paths.filter(p => /\.(png|jpe?g|gif|webp)$/i.test(p));
-          if (imagePaths.length > 0) {
-            setDropPaths(imagePaths);
+          const validImagePaths = payload.paths.filter(p => /\.(png|jpe?g|gif|webp)$/i.test(p));
+          const invalidCount = payload.paths.length - validImagePaths.length;
+          
+          if (invalidCount > 0) {
+            toast.error(`${invalidCount}개의 지원되지 않는 파일이 제외되었습니다.`);
+          }
+
+          if (validImagePaths.length > 0) {
+            setDropPaths(validImagePaths);
             setIsPromptModalOpen(true);
           }
         });

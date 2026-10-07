@@ -66,7 +66,7 @@ export const ClipCard = memo(function ClipCard({ sequenceId, clip, viewMode, isS
             'cursor-pointer transition-all duration-150',
             'hover:border-accent/50 hover:bg-surface-1',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
-            isSelected ? 'border-accent ring-1 ring-blue-500' : 'border-border',
+            isSelected ? 'border-accent ring-1 ring-accent' : 'border-border',
             isGrid ? 'flex flex-col h-auto min-h-[16rem]' : 'flex flex-row items-center p-4 gap-4',
           )}
         >
@@ -84,7 +84,7 @@ export const ClipCard = memo(function ClipCard({ sequenceId, clip, viewMode, isS
                 draggable={false}
               />
             ) : (
-              <ImageIcon className="text-slate-700" size={28} />
+              <ImageIcon className="text-tertiary" size={28} />
             )}
             
             {/* 하드컷 배지 */}
@@ -151,7 +151,7 @@ export const ClipCard = memo(function ClipCard({ sequenceId, clip, viewMode, isS
             className="
               flex items-center gap-2 px-3 py-1.5 rounded-md
               text-sm text-danger cursor-default outline-none
-              data-[highlighted]:bg-red-900/40 data-[highlighted]:text-danger
+              data-[highlighted]:bg-danger/20 data-[highlighted]:text-danger
             "
           >
             <Trash2 size={13} />

@@ -120,7 +120,7 @@ export const TimelineClip = memo(function TimelineClip({ id, pixelsPerSecond }: 
       className={clsx(
         'relative h-20 bg-surface-1 border-y border-r border-border-subtle flex flex-col overflow-visible group',
         isDragging && 'z-50 opacity-60 shadow-2xl',
-        isSelected && 'ring-2 ring-blue-500 z-10',
+        isSelected && 'ring-2 ring-accent z-10',
       )}
       onClick={() => setSelectedCutId(cut.id)}
     >

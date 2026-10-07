@@ -117,10 +117,7 @@ function updateTake(state: StoryFrameStore, takeId: string, updater: (take: Take
   const path = findTakePath(state.project.sequences, takeId);
   if (path) {
     updater(path.take);
-    if (state.project.cuts) {
-      const cut = state.project.cuts.find(c => c.id === takeId);
-      if (cut) updater(cut);
-    }
+    syncCuts(state);
   }
 }
 
